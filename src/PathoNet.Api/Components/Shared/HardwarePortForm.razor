@@ -1,0 +1,116 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Port</span>
+            <input value="@Model.PortId" type="text" disabled />
+        </label>
+        <label class="field">
+            <span>Typ interfejsu</span>
+            <input value="@Model.InterfaceType" type="text" disabled />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Alias techniczny</span>
+            <input @bind="Model.Alias" type="text" placeholder="np. Respirator A / RS485 Bus" />
+        </label>
+        <label class="field">
+            <span>Sciezka lub interfejs</span>
+            <input @bind="Model.DevicePath" type="text" placeholder="np. /dev/ttyEM0 / can0 / eth0" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Nazwa interfejsu sieciowego</span>
+            <input @bind="Model.NetworkInterfaceName" type="text" placeholder="np. eth0 / can0" />
+        </label>
+        <label class="field">
+            <span>Opis portu</span>
+            <input @bind="Model.Description" type="text" placeholder="Opis podlaczonego urzadzenia lub roli portu" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Baud rate</span>
+            <input @bind="Model.BaudRate" type="number" min="1200" max="921600" step="1" />
+        </label>
+        <label class="field">
+            <span>Data bits</span>
+            <input @bind="Model.DataBits" type="number" min="5" max="8" step="1" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Parity</span>
+            <select @bind="Model.Parity">
+                <option value="none">none</option>
+                <option value="even">even</option>
+                <option value="odd">odd</option>
+                <option value="mark">mark</option>
+                <option value="space">space</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Stop bits</span>
+            <select @bind="Model.StopBits">
+                <option value="none">none</option>
+                <option value="one">one</option>
+                <option value="onepointfive">onepointfive</option>
+                <option value="two">two</option>
+            </select>
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Parser</span>
+            <select @bind="Model.ParserKind">
+                <option value="generic-text">generic-text</option>
+                <option value="generic-bus">generic-bus</option>
+                <option value="passive">passive</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Framing</span>
+            <select @bind="Model.FrameMode">
+                <option value="line">line</option>
+                <option value="inactivity-flush">inactivity-flush</option>
+            </select>
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="check-chip">
+            <input @bind="Model.Enabled" type="checkbox" />
+            <span>Port aktywny w collectorze</span>
+        </label>
+        <label class="check-chip">
+            <input @bind="Model.AllowSimulationFallback" type="checkbox" />
+            <span>Dopuszczaj fallback symulacyjny</span>
+        </label>
+    </div>
+    @if (ShowActionButtons)
+    {
+        <div class="form-actions">
+            <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz port</button>
+            @if (ShowRestartAction)
+            {
+                <button class="action-button secondary" type="button" @onclick="HandleSaveAndRestartAsync">Zapisz i zrestartuj collector</button>
+            }
+            <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Przywroc konfiguracje</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public HardwarePortFormModel Model { get; set; } = default!;
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnSaveAndRestart { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+    [Parameter] public bool ShowRestartAction { get; set; }
+    [Parameter] public bool ShowActionButtons { get; set; } = true;
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleSaveAndRestartAsync() => OnSaveAndRestart.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+}

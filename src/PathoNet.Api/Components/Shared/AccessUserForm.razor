@@ -1,0 +1,124 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Login</span>
+            <input @bind="Model.UserName" type="text" placeholder="np. admin" />
+        </label>
+        <label class="field">
+            <span>Nazwa wyswietlana</span>
+            <input @bind="Model.FullName" type="text" placeholder="np. Jan Serwis" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>E-mail</span>
+            <input @bind="Model.Email" type="email" placeholder="np. admin@pathonet.local" />
+        </label>
+        <label class="field">
+            <span>Telefon</span>
+            <input @bind="Model.Phone" type="text" placeholder="+48 500 100 200" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Haslo @(!string.IsNullOrWhiteSpace(Model.UserId) ? "(puste = bez zmiany)" : "(wymagane)")</span>
+            <input @bind="Model.Password" type="password" placeholder="Tymczasowe haslo startowe" />
+        </label>
+        <div class="field">
+            <span>Status konta</span>
+            <div class="field-row">
+                <label class="check-chip">
+                    <input @bind="Model.IsActive" type="checkbox" />
+                    <span>Uzytkownik aktywny</span>
+                </label>
+                <label class="check-chip">
+                    <input @bind="Model.IsServiceAccount" type="checkbox" />
+                    <span>Konto techniczne</span>
+                </label>
+            </div>
+        </div>
+    </div>
+    <div class="field">
+        <span>Role</span>
+        <div class="selection-grid">
+            @foreach (var role in Roles)
+            {
+                var isChecked = Model.RoleIds.Contains(role.Id, StringComparer.OrdinalIgnoreCase);
+                <label class="selection-item">
+                    <input type="checkbox" checked="@isChecked" @onchange="args => ToggleRole(role.Id, args.Value)" />
+                    <span>
+                        <strong>@role.Name</strong>
+                        <small>@role.Description</small>
+                    </span>
+                </label>
+            }
+        </div>
+    </div>
+    <div class="field">
+        <span>Uprawnienia bezposrednie</span>
+        <div class="selection-grid">
+            @foreach (var permission in Permissions)
+            {
+                var isChecked = Model.DirectPermissionIds.Contains(permission.Id, StringComparer.OrdinalIgnoreCase);
+                <label class="selection-item">
+                    <input type="checkbox" checked="@isChecked" @onchange="args => TogglePermission(permission.Id, args.Value)" />
+                    <span>
+                        <strong>@permission.Name</strong>
+                        <small>@permission.Code / @permission.Category</small>
+                    </span>
+                </label>
+            }
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz uzytkownika</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowy uzytkownik</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AccessUserFormModel Model { get; set; } = default!;
+    [Parameter] public IReadOnlyList<PortalIdentityRoleRecord> Roles { get; set; } = Array.Empty<PortalIdentityRoleRecord>();
+    [Parameter] public IReadOnlyList<PortalIdentityPermissionRecord> Permissions { get; set; } = Array.Empty<PortalIdentityPermissionRecord>();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private void ToggleRole(string roleId, object? value)
+    {
+        if (AsBool(value))
+        {
+            if (!Model.RoleIds.Contains(roleId, StringComparer.OrdinalIgnoreCase))
+            {
+                Model.RoleIds.Add(roleId);
+            }
+        }
+        else
+        {
+            Model.RoleIds.RemoveAll(id => string.Equals(id, roleId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private void TogglePermission(string permissionId, object? value)
+    {
+        if (AsBool(value))
+        {
+            if (!Model.DirectPermissionIds.Contains(permissionId, StringComparer.OrdinalIgnoreCase))
+            {
+                Model.DirectPermissionIds.Add(permissionId);
+            }
+        }
+        else
+        {
+            Model.DirectPermissionIds.RemoveAll(id => string.Equals(id, permissionId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+
+    private static bool AsBool(object? value) =>
+        value is bool boolValue
+            ? boolValue
+            : string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+}

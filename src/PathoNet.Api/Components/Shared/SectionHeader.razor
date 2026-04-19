@@ -1,0 +1,9 @@
+<div class="panel-head">
+    <p class="eyebrow">@Eyebrow</p>
+    <h3>@Title</h3>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Eyebrow { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Title { get; set; } = string.Empty;
+}

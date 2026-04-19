@@ -1,0 +1,7 @@
+[Unit]
+Description=PathoNet mock stack
+Wants=pathonet-api.service pathonet-hub.service pathonet-collector.service pathonet-apisender.service pathonet-hdmi-kiosk.service
+After=network-online.target
+
+[Install]
+WantedBy=multi-user.target

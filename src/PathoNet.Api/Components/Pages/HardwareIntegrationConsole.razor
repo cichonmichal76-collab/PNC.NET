@@ -1,0 +1,315 @@
+@page "/blazor/serwis/hardware"
+@attribute [Authorize(Policy = PathoNetPermissions.RulesView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie kreatora podlaczenia...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null)
+{
+    var selectedPort = SelectedPortConfig;
+    var selectedRuntimePort = SelectedRuntimePort;
+    var profiles = selectedPort is null ? [] : GetProfilesForPort(selectedPort);
+    var connectedPorts = _state.Ports.Where(IsPortConnected).ToArray();
+    var otherPorts = _state.Ports.Where(port => !IsPortConnected(port)).ToArray();
+    var selfCheck = SelfCheck;
+    var selfCheckItems = selfCheck?.Items ?? [];
+    var personalization = PersonalizationState;
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <section class="panel-card">
+            <div class="pill-row">
+                <StatusBadge Tone="@_statusTone">Kreator</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">wizard technika</StatusBadge>
+            </div>
+            <p>@_statusMessage</p>
+        </section>
+    }
+
+    <section class="panel-card deployment-shell">
+        <SectionHeader Eyebrow="Kreator podlaczenia" Title="Przygotowanie PNC do pracy onsite" />
+
+        <div class="deployment-progress">
+            @foreach (var step in CommissioningProgressSteps)
+            {
+                var stageClass = IsCurrentCommissioningStep(step)
+                    ? "current"
+                    : IsCompletedCommissioningStep(step)
+                        ? "completed"
+                        : string.Empty;
+
+                <div class="deployment-stage @stageClass">
+                    <span class="deployment-stage-index">@step.Order</span>
+                    <div class="deployment-stage-copy">
+                        <strong>@step.Title</strong>
+                        <small>@step.Description</small>
+                    </div>
+                </div>
+            }
+        </div>
+
+        @switch (_deploymentStage)
+        {
+            case HardwareDeploymentStage.Startup:
+                <section class="hero-band">
+                    <article class="hero-card">
+                        <p class="eyebrow">Krok 1 / Start</p>
+                        <h2>Podlacz urzadzenie do zasilania i wlacz</h2>
+                        <p class="hero-copy">
+                            Przeprowadz kontrole systemu PNC. Gdy wszystkie wymagane testy zakoncza sie statusem PASS,
+                            mozna przejsc do konfiguracji gniazd i parametrow komunikacji.
+                        </p>
+                        <div class="hero-inline">
+                            <StatusBadge Tone="@MapTone(_state.CollectorStatus)">@_state.CollectorStatus</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">PASS @PassedRequiredSelfCheckCount/@RequiredSelfCheckCount</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">sygnal @SignalProgressPercent%@($" / {SignalProgressLabel}")</StatusBadge>
+                        </div>
+                    </article>
+
+                    <article class="hero-card accent">
+                        <p class="eyebrow">Przeprowadz kontrole systemu</p>
+                        <div class="integrity-check-list">
+                            @foreach (var item in selfCheckItems)
+                            {
+                                <div class="integrity-check-row">
+                                    <div class="integrity-check-copy">
+                                        <strong>@item.Title</strong>
+                                        <p class="detail-copy">@item.Summary</p>
+                                    </div>
+                                    <div class="integrity-check-status">
+                                        <StatusBadge Tone="@item.Tone">@item.StatusLabel</StatusBadge>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (SelfCheckCompleted)
+                        {
+                            <div class="wizard-actions">
+                                <button class="action-button primary" type="button" @onclick="ProceedToPersonalization">Dalej</button>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="detail-copy">Przycisk Dalej pojawi sie, gdy wszystkie wymagane testy beda mialy status PASS.</p>
+                        }
+                    </article>
+                </section>
+                break;
+
+            case HardwareDeploymentStage.Personalization:
+                <section class="hero-band">
+                    <article class="hero-card">
+                        <p class="eyebrow">Krok 2 / Personalizacja urzadzenia</p>
+                        <h2>Uzupelnij dane instalacyjne PNC</h2>
+                        <p class="hero-copy">
+                            Wpisz numer seryjny urzadzenia, wybierz docelowa lokalizacje i uzupelnij dane instalatora.
+                            Po zatwierdzeniu przejdziesz do mapy gniazd PNC.
+                        </p>
+                    </article>
+
+                    <article class="hero-card accent">
+                        <p class="eyebrow">Dane pobrane z urzadzenia</p>
+                        <div class="device-readout-grid">
+                            <div class="device-readout-card">
+                                <span>Nr karty SIM</span>
+                                <strong>@_personalizationForm.DetectedSimNumber</strong>
+                            </div>
+                            <div class="device-readout-card">
+                                <span>Wersja software</span>
+                                <strong>@_personalizationForm.DetectedSoftwareVersion</strong>
+                            </div>
+                            <div class="device-readout-card">
+                                <span>Nr seryjny plyty</span>
+                                <strong>@_personalizationForm.DetectedBoardSerialNumber</strong>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="panel-card wizard-shell">
+                    <SectionHeader Eyebrow="Krok 2" Title="Personalizacja urzadzenia" />
+                    <div class="commissioning-form-grid">
+                        <label class="commissioning-field">
+                            <span>Nr seryjny urzadzenia</span>
+                            <input type="text" value="@_personalizationForm.SerialNumber" @onchange="OnSerialNumberChanged" placeholder="np. PNC-2026-001" />
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Wojewodztwo</span>
+                            <select value="@_personalizationForm.Province" @onchange="OnProvinceChanged">
+                                @foreach (var province in ProvinceOptions)
+                                {
+                                    <option value="@province">@province</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Miejscowosc</span>
+                            <select value="@_personalizationForm.City" @onchange="OnCityChanged">
+                                @foreach (var city in CityOptions)
+                                {
+                                    <option value="@city">@city</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Szpital</span>
+                            <select value="@_personalizationForm.Hospital" @onchange="OnHospitalChanged">
+                                @foreach (var hospital in HospitalOptions)
+                                {
+                                    <option value="@hospital">@hospital</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Pracownia</span>
+                            <select value="@_personalizationForm.Site" @onchange="OnSiteChanged">
+                                @foreach (var site in SiteOptions)
+                                {
+                                    <option value="@site">@site</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Nazwisko instalatora</span>
+                            <input type="text" value="@_personalizationForm.InstallerName" @onchange="OnInstallerChanged" placeholder="nazwisko instalatora" />
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Data instalacji</span>
+                            <input type="date" value="@_personalizationForm.InstallationDate.ToString("yyyy-MM-dd")" @onchange="OnInstallationDateChanged" />
+                        </label>
+
+                        <label class="commissioning-field">
+                            <span>Wariant urzadzenia</span>
+                            <select value="@_personalizationForm.Variant" @onchange="OnVariantChanged">
+                                @foreach (var variant in personalization?.VariantOptions ?? [])
+                                {
+                                    <option value="@variant">@variant</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
+
+                    <div class="wizard-actions">
+                        <button class="action-button secondary" type="button" @onclick="ReturnToStartup">Wstecz</button>
+                        <button class="action-button primary" type="button" @onclick="ProceedToPortCommissioning" disabled="@(!ValidatePersonalizationForm())">Dalej</button>
+                    </div>
+                </section>
+                break;
+
+            case HardwareDeploymentStage.PortCommissioning:
+                <section class="hero-band">
+                    <article class="hero-card">
+                        <p class="eyebrow">Krok 3 / Mapa gniazd PNC</p>
+                        <h2>Kliknij gniazdo, ktore chcesz skonfigurowac</h2>
+                        <p class="hero-copy">
+                            Kontrola systemu zakonczona. Teraz wybierz fizyczne gniazdo lub magistrale na tylu urzadzenia,
+                            a kreator przeprowadzi Cie dalej przez profil komunikacji, nastawy, weryfikacje i zapis konfiguracji.
+                        </p>
+                    </article>
+
+                    <article class="hero-card accent">
+                        <p class="eyebrow">Po wyborze gniazda</p>
+                        @if (selectedPort is null)
+                        {
+                            <p class="hero-copy">
+                                Kliknij wybrane gniazdo na mapie PNC. Po wskazaniu portu od razu przejdziesz do doboru profilu komunikacji.
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="hero-inline">
+                                <StatusBadge Tone="@MapTone(selectedRuntimePort?.Status ?? "info")">@(selectedRuntimePort?.Status ?? "info")</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@selectedPort.PortId</StatusBadge>
+                            </div>
+                            <h3>@selectedPort.Alias</h3>
+                            <p class="hero-copy">@((selectedRuntimePort?.Summary ?? selectedPort.Description) ?? "To gniazdo jest gotowe do dalszej konfiguracji.")</p>
+                        }
+                    </article>
+                </section>
+
+                <section class="panel-card wizard-shell">
+                    @switch (_wizardStep)
+                    {
+                        case HardwareWizardStep.SelectPort:
+                            <HardwareWizardPortStep ConnectedPorts="connectedPorts"
+                                                    OtherPorts="otherPorts"
+                                                    SuggestedPortId="_suggestedPortId"
+                                                    SelectedPortId="_selectedPortId"
+                                                    OnSelectPort="SelectPort" />
+                            break;
+
+                        case HardwareWizardStep.ChooseProfile:
+                            <HardwareWizardProfileStep SelectedPort="selectedPort"
+                                                       Profiles="profiles"
+                                                       SelectedProfileName="_selectedProfileName"
+                                                       OnApplyProfile="ApplyProfile" />
+                            break;
+
+                        case HardwareWizardStep.Configure:
+                            <article class="panel-card">
+                                <SectionHeader Eyebrow="Krok 5" Title="Ustaw parametry collectora" />
+                                @if (selectedPort is null)
+                                {
+                                    <p class="empty-state">Najpierw wybierz port.</p>
+                                }
+                                else if (!_canManage)
+                                {
+                                    <p class="empty-state">Masz tylko podglad. Zmiana nastaw portow wymaga uprawnienia <span class="mono">@PathoNetPermissions.PncManage</span>.</p>
+                                }
+                                else
+                                {
+                                    <HardwarePortForm Model="_portForm" ShowActionButtons="false" />
+                                    <p class="detail-copy">Parametry powyzej sa automatycznie wczytywane z zapisanej konfiguracji collectora dla wybranego portu. Profil z kroku 3 tylko nadpisuje je jako sugestie techniczne.</p>
+                                    <p class="detail-copy">Na tym etapie ustaw alias, sciezke portu, baudrate, parity, framing i zasady fallbacku.</p>
+                                }
+                            </article>
+                            break;
+
+                        case HardwareWizardStep.Verify:
+                            <HardwareWizardVerificationStep SelectedRuntimePort="selectedRuntimePort"
+                                                            TestingSignal="_testingSignal"
+                                                            SignalTestResult="_signalTestResult"
+                                                            OnTestSignal="TestSignalAsync" />
+                            break;
+
+                        case HardwareWizardStep.Commit:
+                            <HardwareWizardCommitStep SelectedPort="selectedPort"
+                                                      ConfigState="_configState" />
+                            break;
+                    }
+
+                    <div class="wizard-actions">
+                        <button class="action-button secondary" type="button" @onclick="PreviousStep" disabled="@(_wizardStep == HardwareWizardStep.SelectPort)">Wstecz</button>
+
+                        @if (_wizardStep != HardwareWizardStep.Commit)
+                        {
+                            <button class="action-button primary" type="button" @onclick="NextStep" disabled="@(!CanMoveNext())">Dalej</button>
+                        }
+                        else
+                        {
+                            <button class="action-button primary" type="button" @onclick="SavePortAsync" disabled="@(!_canManage)">Zapisz port</button>
+                            <button class="action-button secondary" type="button" @onclick="SaveAndRestartPortAsync" disabled="@(!_canManage || !_canRestartCollector)">Zapisz i zrestartuj collector</button>
+                        }
+                    </div>
+                </section>
+                break;
+        }
+    </section>
+}

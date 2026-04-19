@@ -1,0 +1,207 @@
+@page "/blazor/przeglad"
+@page "/blazor/urzadzenia"
+@attribute [Authorize(Policy = PathoNetPermissions.PncView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie widoku urzadzen...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null && _fleetState is not null)
+{
+    var devices = _state.PortalState.PncDevices.OrderBy(device => device.DeviceCode, StringComparer.OrdinalIgnoreCase).ToArray();
+    var mainboards = _state.PortalState.Mainboards.ToDictionary(board => board.DeviceCode, StringComparer.OrdinalIgnoreCase);
+    var fleetDevices = _fleetState.PncDevices.ToDictionary(device => device.DeviceCode, StringComparer.OrdinalIgnoreCase);
+    var avgHealth = devices.Length == 0 ? 0 : (int)Math.Round(devices.Average(device => device.HealthScore));
+    var avgSignal = devices.Length == 0 ? 0 : (int)Math.Round(devices.Average(device => device.SignalPercent));
+
+    <section class="hero-band">
+        <article class="hero-card">
+            <p class="eyebrow">Urzadzenia</p>
+            <h2>Szczegolowy widok urzadzen PNC</h2>
+            <p class="hero-copy">
+                Ten widok zbiera wszystkie dostepne parametry wezlow PNC: stan lacznosci, firmware, porty,
+                zdrowie plyty glownej, watchdog, obciazenie, mapowania portow i typy urzadzen podpietych do kazdego PNC.
+            </p>
+            <div class="hero-inline">
+                <StatusBadge Kind="chip" Tone="info">PNC @devices.Length</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">srednie zdrowie @avgHealth%</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">sredni sygnal @avgSignal%</StatusBadge>
+            </div>
+        </article>
+
+        <article class="hero-card accent">
+            <p class="eyebrow">Szybkie akcje</p>
+            <div class="route-grid">
+                <article class="route-card">
+                    <span class="chip info">dashboard</span>
+                    <h3>Powrot do Startu</h3>
+                    <p>Wroc do glownego dashboardu z filtrami, statusami i przekrojowym widokiem floty.</p>
+                    <a class="route-link" href="/blazor">Otworz Start</a>
+                </article>
+                <article class="route-card">
+                    <span class="chip info">konfiguracja</span>
+                    <h3>Edytor PNC</h3>
+                    <p>Jesli potrzebujesz zmian konfiguracyjnych, przejdz do dedykowanego edytora floty i polaczen.</p>
+                    <a class="route-link" href="/blazor/pnc">Otworz PNC</a>
+                </article>
+            </div>
+        </article>
+    </section>
+
+    <MetricGrid>
+        <MetricTile Label="Wszystkie PNC" Value="@devices.Length.ToString()" Caption="Szczegolowy widok floty" />
+        <MetricTile Label="Online" Value="@devices.Count(device => device.IsOnline).ToString()" Caption="Wezly aktywne" />
+        <MetricTile Label="Offline" Value="@devices.Count(device => !device.IsOnline).ToString()" Caption="Wezly niedostepne" />
+        <MetricTile Label="Porty" Value="@fleetDevices.Values.Sum(device => device.Connections.Length).ToString()" Caption="Mapowania zewnetrzne" />
+        <MetricTile Label="Zdrowie" Value="@($"{avgHealth}%")" Caption="Sredni health score floty" />
+        <MetricTile Label="Alerty" Value="@_state.PortalState.Alerts.Length.ToString()" Caption="Otwarte zdarzenia powiazane z flota" />
+    </MetricGrid>
+
+    <section class="stack-list">
+        @foreach (var device in devices)
+        {
+            var board = mainboards.GetValueOrDefault(device.DeviceCode);
+            var fleetDevice = fleetDevices.GetValueOrDefault(device.DeviceCode);
+            var connections = fleetDevice?.Connections ?? [];
+
+            <article class="panel-card">
+                <div class="panel-head">
+                    <div class="pill-row">
+                        <StatusBadge Tone="@(device.IsOnline ? "online" : "critical")">@(device.IsOnline ? "online" : "offline")</StatusBadge>
+                        <StatusBadge Kind="chip" Tone="@MapTone(device.Status)">@device.Status</StatusBadge>
+                        <StatusBadge Kind="chip" Tone="info">@device.DeviceCode</StatusBadge>
+                        <StatusBadge Kind="chip" Tone="info">soft @device.Firmware</StatusBadge>
+                    </div>
+                    <h3>@device.Name</h3>
+                    <p>@device.Province / @device.City / @device.Hospital / @device.Site</p>
+                </div>
+
+                <div class="mini-metric-grid wide">
+                    <article class="metric-tile">
+                        <span>Zdrowie</span>
+                        <strong>@device.HealthScore%</strong>
+                        <small>@device.MainboardStatus</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Sygnal</span>
+                        <strong>@device.SignalPercent%</strong>
+                        <small>@device.SignalDbm dBm / @device.SignalQuality</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Porty</span>
+                        <strong>@(device.Rs232Connected + device.Rs485Connected + device.CanConnected + device.EthernetConnected + device.DigitalInputs + device.DigitalOutputs)</strong>
+                        <small>RS-232 @device.Rs232Connected / RS-485 @device.Rs485Connected / CAN @device.CanConnected / ETH @device.EthernetConnected</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Temp / V</span>
+                        <strong>@device.MainboardTempC C</strong>
+                        <small>@device.SupplyVoltage.ToString("0.0") V</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Watchdog</span>
+                        <strong>@(board?.WatchdogState ?? "brak")</strong>
+                        <small>uptime @(board?.UptimeHours.ToString() ?? "-") h</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>CPU / RAM / Dysk</span>
+                        <strong>@(board is null ? "-" : $"{board.CpuLoadPercent}% / {board.MemoryPercent}% / {board.StoragePercent}%")</strong>
+                        <small>serial @(board?.BoardSerialNumber ?? "-")</small>
+                    </article>
+                </div>
+
+                <div class="content-grid two-up">
+                    <article class="stack-item">
+                        <strong>Parametry komunikacyjne</strong>
+                        <p>@device.OperatorName / @device.NetworkType / SIM @device.SimNumber</p>
+                        <p class="detail-copy">ostatnio widziany @device.LastSeen</p>
+                        <div class="chip-row">
+                            @foreach (var connectedType in device.ConnectedDeviceTypes)
+                            {
+                                <span class="chip info">@connectedType</span>
+                            }
+                        </div>
+                    </article>
+
+                    <article class="stack-item">
+                        <strong>Zdrowie plyty i wezla</strong>
+                        <p>@device.Summary</p>
+                        <p class="detail-copy">@((board?.Summary) ?? "Brak rozszerzonego telemetrycznego opisu plyty.")</p>
+                    </article>
+                </div>
+
+                <div class="stack-list">
+                    <article class="stack-item">
+                        <strong>Podlaczone urzadzenia i porty</strong>
+                        @if (connections.Length == 0)
+                        {
+                            <p class="detail-copy">Brak skonfigurowanych mapowan portow.</p>
+                        }
+                        else
+                        {
+                            @foreach (var connection in connections)
+                            {
+                                <div class="pill-row">
+                                    <StatusBadge Tone="@MapTone(connection.Status)">@connection.Status</StatusBadge>
+                                    <StatusBadge Kind="chip" Tone="info">@connection.InterfaceType</StatusBadge>
+                                    <StatusBadge Kind="chip" Tone="info">@connection.PortName</StatusBadge>
+                                    <span class="mono">@connection.DeviceName</span>
+                                </div>
+                            }
+                        }
+                    </article>
+                </div>
+            </article>
+        }
+    </section>
+}
+
+@code {
+    private BlazorServiceDashboardState? _state;
+    private PortalFleetConfig? _fleetState;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() =>
+        await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _state = await PortalService.GetServiceDashboardAsync(CancellationToken.None);
+            _fleetState = PortalService.GetFleetState();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Nie udalo sie zaladowac szczegolowego przegladu: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string MapTone(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "online" => "online",
+            "attention" => "attention",
+            "critical" => "critical",
+            "alarm" => "critical",
+            "warn" => "attention",
+            _ => "info"
+        };
+}

@@ -1,0 +1,124 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Kod PNC</span>
+            <input @bind="Model.DeviceCode" type="text" placeholder="np. PNC-006" />
+        </label>
+        <label class="field">
+            <span>Nazwa urzadzenia</span>
+            <input @bind="Model.Name" type="text" placeholder="np. PNC Blok Operacyjny" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Lokalizacja</span>
+            <input @bind="Model.Location" type="text" placeholder="np. Lodz / Blok operacyjny" />
+        </label>
+        <label class="field">
+            <span>Operator</span>
+            <input @bind="Model.OperatorName" type="text" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Typ sieci</span>
+            <input @bind="Model.NetworkType" type="text" />
+        </label>
+        <label class="field">
+            <span>Firmware</span>
+            <input @bind="Model.Firmware" type="text" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Numer SIM</span>
+            <input @bind="Model.SimNumber" type="text" placeholder="+48 510 200 106" />
+        </label>
+        <label class="field">
+            <span>Slot SIM</span>
+            <input @bind="Model.SimSlot" type="text" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Sila sygnalu (%)</span>
+            <input @bind="Model.SignalPercent" type="number" min="0" max="100" />
+        </label>
+        <label class="field">
+            <span>Sygnal dBm</span>
+            <input @bind="Model.SignalDbm" type="number" min="-120" max="-30" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Rewizja plyty</span>
+            <input @bind="Model.BoardRevision" type="text" />
+        </label>
+        <label class="field">
+            <span>Numer seryjny plyty</span>
+            <input @bind="Model.BoardSerialNumber" type="text" placeholder="np. PNC006-MB-2409" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Status plyty glownej</span>
+            <input @bind="Model.MainboardStatus" type="text" />
+        </label>
+        <label class="field">
+            <span>Temperatura plyty (C)</span>
+            <input @bind="Model.MainboardTempC" type="number" min="20" max="95" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Napiecie zasilania (V)</span>
+            <input @bind="Model.SupplyVoltage" type="number" min="5" max="60" step="0.1" />
+        </label>
+        <label class="field">
+            <span>Uptime (h)</span>
+            <input @bind="Model.UptimeHours" type="number" min="1" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>CPU (%)</span>
+            <input @bind="Model.CpuLoadPercent" type="number" min="0" max="100" />
+        </label>
+        <label class="field">
+            <span>Pamiec (%)</span>
+            <input @bind="Model.MemoryPercent" type="number" min="0" max="100" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Dysk (%)</span>
+            <input @bind="Model.StoragePercent" type="number" min="0" max="100" />
+        </label>
+        <label class="check-chip">
+            <input @bind="Model.Online" type="checkbox" />
+            <span>Wezel jest online</span>
+        </label>
+    </div>
+    <label class="check-chip">
+        <input @bind="Model.WatchdogHealthy" type="checkbox" />
+        <span>Watchdog aktywny i zdrowy</span>
+    </label>
+    <label class="field">
+        <span>Opis operacyjny</span>
+        <textarea @bind="Model.Notes" rows="3" placeholder="Jakie urzadzenia agreguje ten wezel i do czego sluzy."></textarea>
+    </label>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz PNC</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowy formularz</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PncFormModel Model { get; set; } = default!;
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+}

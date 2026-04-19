@@ -1,0 +1,30 @@
+[Unit]
+Description=PathoNet HDMI Kiosk
+After=pathonet-api.service systemd-user-sessions.service network-online.target
+Wants=pathonet-api.service network-online.target
+PartOf=pathonet.target
+
+[Service]
+Type=simple
+Environment=PATHONET_ROOT=/opt/pathonet/current
+Environment=PATHONET_KIOSK_URL=http://127.0.0.1:5000/hdmi
+Environment=PATHONET_KIOSK_HOME=/var/lib/pathonet-kiosk
+EnvironmentFile=-/etc/pathonet/pathonet.env
+User=pathonet
+Group=pathonet
+WorkingDirectory=${PATHONET_ROOT}/kiosk
+PAMName=login
+TTYPath=/dev/tty7
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-force
+ExecStart=${PATHONET_ROOT}/kiosk/start-pathonet-hdmi-kiosk.sh
+Restart=always
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=20
+SyslogIdentifier=pathonet-hdmi-kiosk
+
+[Install]
+WantedBy=pathonet.target

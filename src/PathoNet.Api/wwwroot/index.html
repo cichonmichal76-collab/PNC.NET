@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel Serwisu PathoNet</title>
+    <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+    <div class="portal-shell">
+        <aside class="portal-rail">
+            <div class="brand-block">
+                <p class="eyebrow">PathoNet</p>
+                <h1>Panel Serwisu</h1>
+                <p class="support-copy">
+                    Narzedzia wdrozen, OTA, reguly i diagnostyka dla floty PNC.
+                </p>
+            </div>
+
+            <nav class="nav-list">
+                <button class="nav-item active" data-view="overview">
+                    <span>Przeglad</span>
+                    <small data-badge="overview">live</small>
+                </button>
+                <button class="nav-item" data-view="alerts">
+                    <span>Alerty</span>
+                    <small data-badge="alerts">0</small>
+                </button>
+                <button class="nav-item" data-view="devices">
+                    <span>Urzadzenia</span>
+                    <small data-badge="devices">0</small>
+                </button>
+                <button class="nav-item" data-view="groups">
+                    <span>Grupy</span>
+                    <small data-badge="groups">0</small>
+                </button>
+                <button class="nav-item" data-view="history">
+                    <span>Historia</span>
+                    <small data-badge="history">0</small>
+                </button>
+                <button class="nav-item" data-view="prediction">
+                    <span>Predykcja</span>
+                    <small data-badge="prediction">0</small>
+                </button>
+                <button class="nav-item" data-view="lte">
+                    <span>LTE</span>
+                    <small data-badge="lte">-</small>
+                </button>
+                 <button class="nav-item" data-view="pnc">
+                     <span>PNC</span>
+                     <small data-badge="pnc">0</small>
+                 </button>
+                 <button class="nav-item" data-view="wizard">
+                     <span>Kreator PNC</span>
+                     <small data-badge="wizard">0</small>
+                 </button>
+                 <button class="nav-item" data-view="board">
+                     <span>Plyta glowna</span>
+                     <small data-badge="board">0</small>
+                 </button>
+                 <button class="nav-item" data-view="ota">
+                     <span>OTA</span>
+                     <small data-badge="ota">0</small>
+                 </button>
+                 <button class="nav-item" data-view="rules">
+                     <span>Reguly</span>
+                     <small data-badge="rules">0</small>
+                 </button>
+             </nav>
+
+            <div class="rail-card">
+                <p class="eyebrow">Panele WWW</p>
+                <strong>Wejscia do portalu</strong>
+                <p>Przelaczaj sie pomiedzy hubem WWW, klientem, analiza, mockiem i ekranem HDMI.</p>
+                <a class="rail-link" href="/">Strona glowna</a>
+                <a class="rail-link" href="/blazor/urzadzenia" target="_blank" rel="noreferrer">Panel urzadzen</a>
+                <a class="rail-link" href="/blazor/analiza" target="_blank" rel="noreferrer">Panel analizy</a>
+                <a class="rail-link" href="/blazor/diagnostyka" target="_blank" rel="noreferrer">Panel diagnostyki</a>
+                <a class="rail-link" href="/hdmi" target="_blank" rel="noreferrer">Widok HDMI</a>
+            </div>
+
+            <div class="rail-card compact">
+                <p class="eyebrow">Stan Portalu</p>
+                <strong id="portal-status">Laczenie</strong>
+                <p id="portal-status-copy">Oczekiwanie na stan portalu.</p>
+            </div>
+        </aside>
+
+        <main class="portal-main">
+            <header class="hero">
+                <div>
+                    <p class="eyebrow">Monitoring Edge to Cloud</p>
+                    <h2 id="hero-title">Wczytywanie stanu portalu</h2>
+                    <p id="hero-copy" class="hero-copy">
+                        Odczyt urzadzen, aktualizacji OTA i zdarzen serwisowych z lokalnej symulacji PathoNet.
+                    </p>
+                </div>
+
+                <div class="hero-panel">
+                    <article class="hero-stat">
+                        <span>Wersja</span>
+                        <strong id="hero-version">-</strong>
+                    </article>
+                    <article class="hero-stat">
+                        <span>Ostatnie zdarzenie</span>
+                        <strong id="hero-last-event">-</strong>
+                    </article>
+                    <article class="hero-stat">
+                        <span>Ostatni heartbeat</span>
+                        <strong id="hero-last-heartbeat">-</strong>
+                    </article>
+                </div>
+            </header>
+
+            <section id="summary-cards" class="summary-grid"></section>
+
+            <section class="view-panel active" data-panel="overview">
+                <div class="panel-grid two-up">
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Roadmapa</p>
+                            <h3>Postep realizacji PRD</h3>
+                        </div>
+                        <div id="roadmap-grid" class="stack-grid"></div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Uzytkownicy</p>
+                            <h3>Role portalu</h3>
+                        </div>
+                        <div id="roles-grid" class="stack-grid"></div>
+                    </article>
+                </div>
+
+                <div class="panel-grid two-up">
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Przeplyw operacyjny</p>
+                            <h3>Puls pipeline'u</h3>
+                        </div>
+                        <div id="pipeline-grid" class="pipeline-grid"></div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Predykcja</p>
+                            <h3>Najwazniejsze ryzyka</h3>
+                        </div>
+                        <div id="overview-predictions" class="stack-grid"></div>
+                    </article>
+                </div>
+
+                <div class="panel-grid two-up">
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Lacznosc mobilna</p>
+                            <h3>Mock modemu LTE na plycie glownej</h3>
+                        </div>
+                        <div id="overview-lte" class="stack-grid"></div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Flota PNC</p>
+                            <h3>Najwazniejsze wezly terenowe</h3>
+                        </div>
+                        <div id="overview-pnc" class="stack-grid"></div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="view-panel" data-panel="alerts">
+                <article class="card">
+                    <div class="card-head">
+                        <p class="eyebrow">Centrum Alertow</p>
+                        <h3>Ostatnie alerty operacyjne</h3>
+                    </div>
+                    <div id="alerts-list" class="stack-grid"></div>
+                </article>
+            </section>
+
+            <section class="view-panel" data-panel="devices">
+                <article class="card">
+                    <div class="card-head">
+                        <p class="eyebrow">Urzadzenia</p>
+                        <h3>Status floty wedlug portu szeregowego</h3>
+                    </div>
+                    <div id="devices-grid" class="device-grid"></div>
+                </article>
+            </section>
+
+            <section class="view-panel" data-panel="groups">
+                <article class="card">
+                    <div class="card-head">
+                        <p class="eyebrow">Grupowanie</p>
+                        <h3>Model grup urzadzen</h3>
+                    </div>
+                    <div id="groups-grid" class="group-grid"></div>
+                </article>
+            </section>
+
+            <section class="view-panel" data-panel="history">
+                <div class="panel-grid two-up">
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Aktywnosc</p>
+                            <h3>Ostatnie natezenie sygnalow</h3>
+                        </div>
+                        <div id="activity-bars" class="activity-chart"></div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Historia</p>
+                            <h3>Ostatni dziennik zdarzen</h3>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Poziom</th>
+                                        <th>Port</th>
+                                        <th>Alias</th>
+                                        <th>Komunikat</th>
+                                        <th>Czas</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-body">
+                                    <tr>
+                                        <td colspan="5" class="empty-row">Brak historii.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
+            <section class="view-panel" data-panel="prediction">
+                <article class="card">
+                    <div class="card-head">
+                        <p class="eyebrow">Predykcja</p>
+                        <h3>Heurystyczna prognoza utrzymania</h3>
+                    </div>
+                    <div id="prediction-grid" class="prediction-grid"></div>
+                </article>
+            </section>
+
+            <section class="view-panel" data-panel="lte">
+                <article class="card">
+                    <div class="card-head">
+                        <p class="eyebrow">Mock LTE</p>
+                        <h3>Karta SIM i parametry sieci GSM/LTE</h3>
+                    </div>
+                    <div id="lte-panel" class="stack-grid"></div>
+                </article>
+            </section>
+
+             <section class="view-panel" data-panel="pnc">
+                 <article class="card">
+                     <div class="card-head">
+                         <p class="eyebrow">Flota PNC</p>
+                         <h3>Lista urzadzen nadrzednych i interfejsow zewnetrznych</h3>
+                    </div>
+                     <div id="pnc-grid" class="device-grid"></div>
+                 </article>
+             </section>
+
+             <section class="view-panel" data-panel="wizard">
+                 <div class="panel-grid two-up">
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Provisioning</p>
+                             <h3>Kreator urzadzen PNC</h3>
+                             <p class="muted-copy">
+                                 Dodawaj nowe wezly, przypisuj lokalizacje i parametry radiowe, a potem wybieraj urzadzenie do konfiguracji portow.
+                             </p>
+                         </div>
+                         <div id="fleet-summary" class="summary-grid compact-grid"></div>
+                         <p id="fleet-status" class="muted-copy inline-status">Kreator czeka na odczyt konfiguracji floty.</p>
+                         <div id="wizard-pnc-list" class="stack-grid"></div>
+                     </article>
+
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Formularz PNC</p>
+                             <h3>Dodaj lub popraw wezel</h3>
+                         </div>
+                         <form id="pnc-form" class="editor-form">
+                             <input type="hidden" id="pnc-original-code">
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Kod PNC</span>
+                                     <input id="pnc-device-code" type="text" placeholder="np. PNC-006">
+                                 </label>
+                                 <label class="field">
+                                     <span>Nazwa urzadzenia</span>
+                                     <input id="pnc-name" type="text" placeholder="np. PNC Blok Operacyjny">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Lokalizacja</span>
+                                     <input id="pnc-location" type="text" placeholder="np. Lodz / Blok operacyjny">
+                                 </label>
+                                 <label class="field">
+                                     <span>Operator</span>
+                                     <input id="pnc-operator" type="text" placeholder="np. Orange PL">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Typ sieci</span>
+                                     <input id="pnc-network-type" type="text" placeholder="np. LTE lub LTE-M">
+                                 </label>
+                                 <label class="field">
+                                     <span>Numer SIM</span>
+                                     <input id="pnc-sim-number" type="text" placeholder="+48 510 200 106">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Slot SIM</span>
+                                     <input id="pnc-sim-slot" type="text" placeholder="np. SIM1">
+                                 </label>
+                                 <label class="field">
+                                     <span>Firmware</span>
+                                     <input id="pnc-firmware" type="text" placeholder="np. PNC-OS 2.4.2">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Sila sygnalu (%)</span>
+                                     <input id="pnc-signal-percent" type="number" min="0" max="100" step="1" value="70">
+                                 </label>
+                                 <label class="field">
+                                     <span>Sygnal dBm</span>
+                                     <input id="pnc-signal-dbm" type="number" min="-120" max="-30" step="1" value="-72">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Rewizja plyty</span>
+                                     <input id="pnc-board-revision" type="text" placeholder="np. MB-2.2">
+                                 </label>
+                                 <label class="field">
+                                     <span>Numer seryjny plyty</span>
+                                     <input id="pnc-board-serial" type="text" placeholder="np. PNC006-MB-2409">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Status plyty glownej</span>
+                                     <input id="pnc-mainboard-status" type="text" placeholder="np. stabilna lub do obserwacji">
+                                 </label>
+                                 <label class="field">
+                                     <span>Temperatura plyty (C)</span>
+                                     <input id="pnc-mainboard-temp" type="number" min="20" max="95" step="1" value="44">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Napiecie zasilania (V)</span>
+                                     <input id="pnc-supply-voltage" type="number" min="5" max="60" step="0.1" value="24.0">
+                                 </label>
+                                 <label class="field">
+                                     <span>Uptime (h)</span>
+                                     <input id="pnc-uptime-hours" type="number" min="1" step="1" value="24">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>CPU (%)</span>
+                                     <input id="pnc-cpu-load" type="number" min="0" max="100" step="1" value="35">
+                                 </label>
+                                 <label class="field">
+                                     <span>Pamiec (%)</span>
+                                     <input id="pnc-memory-load" type="number" min="0" max="100" step="1" value="45">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Dysk (%)</span>
+                                     <input id="pnc-storage-load" type="number" min="0" max="100" step="1" value="55">
+                                 </label>
+                                 <label class="field toggle-field">
+                                     <span>Online</span>
+                                     <input id="pnc-online" type="checkbox" checked>
+                                 </label>
+                             </div>
+                             <label class="check-chip">
+                                 <input id="pnc-watchdog-healthy" type="checkbox" checked>
+                                 <span>Watchdog aktywny</span>
+                             </label>
+                             <label class="field">
+                                 <span>Opis operacyjny</span>
+                                 <textarea id="pnc-notes" rows="3" placeholder="Jakie urzadzenia agreguje ten wezel i do czego sluzy."></textarea>
+                             </label>
+                             <div class="form-actions">
+                                 <button class="action-button primary" type="submit">Zapisz PNC</button>
+                                 <button class="action-button ghost" type="button" id="pnc-clear">Nowy formularz</button>
+                             </div>
+                         </form>
+                     </article>
+                 </div>
+
+                 <div class="panel-grid two-up">
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Porty zewnetrzne</p>
+                             <h3 id="connection-owner">Wybierz PNC do konfiguracji portow</h3>
+                             <p class="muted-copy">
+                                 Po zapisaniu wezla skonfiguruj podlaczone urzadzenia na RS-232, CAN, Ethernet oraz liniach I/O.
+                             </p>
+                         </div>
+                         <div id="wizard-connection-list" class="stack-grid"></div>
+                     </article>
+
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Edytor polaczenia</p>
+                             <h3>Dodaj urzadzenie do portu</h3>
+                         </div>
+                         <form id="connection-form" class="editor-form">
+                             <input type="hidden" id="connection-id">
+                             <label class="field">
+                                 <span>Interfejs</span>
+                                 <select id="connection-interface-type">
+                                     <option value="rs232">RS-232</option>
+                                     <option value="can">CAN</option>
+                                     <option value="ethernet">Ethernet</option>
+                                     <option value="digital-input">Digital input</option>
+                                     <option value="digital-output">Digital output</option>
+                                 </select>
+                             </label>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Nazwa portu</span>
+                                     <input id="connection-port-name" type="text" placeholder="np. COM3 lub CAN-B">
+                                 </label>
+                                 <label class="field">
+                                     <span>Urzadzenie koncowe</span>
+                                     <input id="connection-device-name" type="text" placeholder="np. Respirator">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Protokol</span>
+                                     <input id="connection-protocol" type="text" placeholder="np. MODBUS RTU">
+                                 </label>
+                                 <label class="field">
+                                     <span>Baud rate</span>
+                                     <input id="connection-baud-rate" type="number" min="1200" step="100" placeholder="np. 9600">
+                                 </label>
+                             </div>
+                             <label class="field">
+                                 <span>Status polaczenia</span>
+                                 <select id="connection-status">
+                                     <option value="online">Online</option>
+                                     <option value="attention">Uwaga</option>
+                                     <option value="critical">Krytyczny</option>
+                                 </select>
+                             </label>
+                             <label class="field">
+                                 <span>Opis i notatki</span>
+                                 <textarea id="connection-notes" rows="3" placeholder="Co jest podpiete do tego portu i czy sa wymagania serwisowe."></textarea>
+                             </label>
+                             <div class="form-actions">
+                                 <button class="action-button primary" type="submit">Zapisz polaczenie</button>
+                                 <button class="action-button ghost" type="button" id="connection-clear">Wyczysc formularz</button>
+                             </div>
+                         </form>
+                     </article>
+                 </div>
+             </section>
+
+             <section class="view-panel" data-panel="board">
+                 <article class="card">
+                     <div class="card-head">
+                         <p class="eyebrow">Monitor plyty glownej</p>
+                         <h3>Stan CPU, pamieci, napiecia i watchdoga</h3>
+                         <p class="muted-copy">
+                             Widok dla serwisu i onboardingu nowych wezlow. Pokazuje telemetrie plyty glownej wraz z mapowaniami portow.
+                         </p>
+                     </div>
+                     <div id="mainboard-summary" class="summary-grid compact-grid"></div>
+                     <div id="mainboard-grid" class="device-grid"></div>
+                 </article>
+             </section>
+
+             <section class="view-panel" data-panel="ota">
+                 <div class="panel-grid two-up">
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Software OTA</p>
+                             <h3>Zarzadzanie aktualizacjami online</h3>
+                             <p class="muted-copy">
+                                 Wysylaj pakiety software z serwera przez LTE do PNC, planuj harmonogram i nadzoruj wynik wdrozenia.
+                             </p>
+                         </div>
+                         <div id="ota-summary" class="summary-grid compact-grid"></div>
+                         <p id="ota-status" class="muted-copy inline-status">Panel OTA czeka na odczyt konfiguracji.</p>
+                         <div id="ota-packages" class="stack-grid"></div>
+                     </article>
+
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Edytor pakietu</p>
+                             <h3>Dodaj lub popraw paczke OTA</h3>
+                         </div>
+                         <form id="ota-package-form" class="editor-form">
+                             <input type="hidden" id="ota-package-id">
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Nazwa pakietu</span>
+                                     <input id="ota-package-name" type="text" placeholder="np. PNC Core">
+                                 </label>
+                                 <label class="field">
+                                     <span>Wersja</span>
+                                     <input id="ota-package-version" type="text" placeholder="np. 2.5.0">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Obszar docelowy</span>
+                                     <input id="ota-package-target" type="text" placeholder="np. PNC OS">
+                                 </label>
+                                 <label class="field">
+                                     <span>Plik</span>
+                                     <input id="ota-package-file" type="text" placeholder="np. pnc-core-2.5.0.bin">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Rozmiar (MB)</span>
+                                     <input id="ota-package-size" type="number" min="1" step="0.1" value="32">
+                                 </label>
+                                 <label class="check-chip">
+                                     <input id="ota-package-mandatory" type="checkbox">
+                                     <span>Aktualizacja wymagana</span>
+                                 </label>
+                             </div>
+                             <label class="field">
+                                 <span>Opis pakietu</span>
+                                 <textarea id="ota-package-description" rows="2" placeholder="Co zawiera paczka i jaki jest cel wdrozenia."></textarea>
+                             </label>
+                             <label class="field">
+                                 <span>Release notes</span>
+                                 <textarea id="ota-package-notes" rows="3" placeholder="Zmiany, poprawki i wymagania po wdrozeniu."></textarea>
+                             </label>
+                             <div class="form-actions">
+                                 <button class="action-button primary" type="submit">Zapisz pakiet</button>
+                                 <button class="action-button ghost" type="button" id="ota-package-clear">Nowy pakiet</button>
+                             </div>
+                         </form>
+                     </article>
+                 </div>
+
+                 <div class="panel-grid two-up">
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Harmonogram wysylki</p>
+                             <h3>Kampanie OTA do PNC</h3>
+                             <p class="muted-copy">
+                                 Wybierz pakiet, docelowe wezly PNC, okno serwisowe oraz odbiorcow automatycznego e-maila po wdrozeniu.
+                             </p>
+                         </div>
+                         <div id="ota-campaigns" class="stack-grid"></div>
+                     </article>
+
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Edytor kampanii</p>
+                             <h3>Nowa wysylka online</h3>
+                         </div>
+                         <form id="ota-campaign-form" class="editor-form">
+                             <input type="hidden" id="ota-campaign-id">
+                             <label class="field">
+                                 <span>Nazwa kampanii</span>
+                                 <input id="ota-campaign-title" type="text" placeholder="np. Rollout PNC Core 2.5.0">
+                             </label>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Pakiet OTA</span>
+                                     <select id="ota-campaign-package"></select>
+                                 </label>
+                                 <label class="field">
+                                     <span>Termin wysylki</span>
+                                     <input id="ota-campaign-scheduled" type="datetime-local">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Transport</span>
+                                     <input id="ota-campaign-transport" type="text" value="LTE">
+                                 </label>
+                                 <label class="field">
+                                     <span>Okno serwisowe</span>
+                                     <input id="ota-campaign-window" type="text" placeholder="np. 23:00-02:00">
+                                 </label>
+                             </div>
+                             <div class="field-row">
+                                 <label class="field">
+                                     <span>Liczba retry</span>
+                                     <input id="ota-campaign-retry" type="number" min="0" max="10" step="1" value="2">
+                                 </label>
+                                 <label class="check-chip">
+                                     <input id="ota-campaign-email" type="checkbox" checked>
+                                     <span>Automatyczny e-mail do serwisu</span>
+                                 </label>
+                             </div>
+                             <div class="field">
+                                 <span>Docelowe PNC</span>
+                                 <div id="ota-target-list" class="selection-grid"></div>
+                             </div>
+                             <div class="field">
+                                 <span>Odbiorcy e-maila serwisowego</span>
+                                 <div id="ota-recipient-list" class="selection-grid"></div>
+                             </div>
+                             <label class="field">
+                                 <span>Notatka wdrozeniowa</span>
+                                 <textarea id="ota-campaign-notes" rows="3" placeholder="Opis celu wdrozenia, planowany restart i uwagi do serwisu."></textarea>
+                             </label>
+                             <div class="form-actions">
+                                 <button class="action-button primary" type="submit">Zapisz kampanie</button>
+                                 <button class="action-button ghost" type="button" id="ota-campaign-clear">Nowa kampania</button>
+                             </div>
+                         </form>
+                     </article>
+                 </div>
+
+                 <div class="panel-grid two-up">
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">Logi OTA</p>
+                             <h3>Przebieg wdrozen i walidacji</h3>
+                         </div>
+                         <div id="ota-log-list" class="stack-grid"></div>
+                     </article>
+
+                     <article class="card">
+                         <div class="card-head">
+                             <p class="eyebrow">E-mail do serwisu</p>
+                             <h3>Automatyczne podsumowania powdrozeniowe</h3>
+                         </div>
+                         <div id="ota-email-list" class="stack-grid"></div>
+                     </article>
+                 </div>
+             </section>
+
+             <section class="view-panel" data-panel="rules">
+                 <div class="panel-grid two-up">
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Rulebook</p>
+                            <h3>Mapowanie surowych komunikatow</h3>
+                            <p class="muted-copy">
+                                Nadaj komunikatom nazwy biznesowe i ustaw progi eskalacji na SMS lub e-mail.
+                            </p>
+                        </div>
+                        <div id="rulebook-summary" class="summary-grid compact-grid"></div>
+                        <p id="rulebook-status" class="muted-copy inline-status">Rulebook czeka na odczyt.</p>
+                        <div id="rules-list" class="stack-grid"></div>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Edytor reguly</p>
+                            <h3>Dodaj lub popraw mapowanie</h3>
+                        </div>
+                        <form id="rule-form" class="editor-form">
+                            <input type="hidden" id="rule-id">
+                            <label class="field">
+                                <span>Nazwa biznesowa</span>
+                                <input id="rule-name" type="text" placeholder="np. Awaryjne zatrzymanie silnika">
+                            </label>
+                            <label class="field">
+                                <span>Wzorzec surowego komunikatu</span>
+                                <input id="rule-match-text" type="text" placeholder="np. Device_4|ALARM SENSOR_TIMEOUT">
+                            </label>
+                            <label class="field">
+                                <span>Typ komunikatu</span>
+                                <select id="rule-message-type">
+                                    <option value="any">Dowolny</option>
+                                    <option value="alarm">Alarm</option>
+                                    <option value="warn">Ostrzezenie</option>
+                                    <option value="info">Informacja</option>
+                                    <option value="error">Blad</option>
+                                </select>
+                            </label>
+                            <label class="field">
+                                <span>Opis operacyjny</span>
+                                <textarea id="rule-description" rows="3" placeholder="Po co istnieje ta regula i co oznacza."></textarea>
+                            </label>
+                            <div class="field-row">
+                                <label class="field">
+                                    <span>Prog w godzinach</span>
+                                    <input id="rule-threshold" type="number" min="0" step="0.5" value="5">
+                                </label>
+                                <label class="field toggle-field">
+                                    <span>Aktywna</span>
+                                    <input id="rule-enabled" type="checkbox" checked>
+                                </label>
+                            </div>
+                            <div class="field-row">
+                                <label class="check-chip">
+                                    <input id="rule-send-sms" type="checkbox">
+                                    <span>Wyslij SMS</span>
+                                </label>
+                                <label class="check-chip">
+                                    <input id="rule-send-email" type="checkbox" checked>
+                                    <span>Wyslij e-mail</span>
+                                </label>
+                            </div>
+                            <div class="field">
+                                <span>Odbiorcy eskalacji</span>
+                                <div id="rule-recipient-list" class="selection-grid"></div>
+                            </div>
+                            <div class="form-actions">
+                                <button class="action-button primary" type="submit">Zapisz regule</button>
+                                <button class="action-button ghost" type="button" id="rule-clear">Wyczysc formularz</button>
+                            </div>
+                        </form>
+                    </article>
+                </div>
+
+                <div class="panel-grid two-up">
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Uzytkownicy</p>
+                            <h3>Lista odbiorcow systemu</h3>
+                        </div>
+                        <div id="users-list" class="stack-grid"></div>
+                        <form id="user-form" class="editor-form">
+                            <input type="hidden" id="user-id">
+                            <div class="field-row">
+                                <label class="field">
+                                    <span>Imie i nazwisko</span>
+                                    <input id="user-display-name" type="text" placeholder="np. Marek Serwis">
+                                </label>
+                                <label class="field">
+                                    <span>Rola</span>
+                                    <input id="user-role" type="text" placeholder="np. Serwis">
+                                </label>
+                            </div>
+                            <div class="field-row">
+                                <label class="field">
+                                    <span>E-mail</span>
+                                    <input id="user-email" type="email" placeholder="user@pathonet.local">
+                                </label>
+                                <label class="field">
+                                    <span>Telefon</span>
+                                    <input id="user-phone" type="text" placeholder="+48 600 100 200">
+                                </label>
+                            </div>
+                            <div class="form-actions">
+                                <button class="action-button primary" type="submit">Zapisz uzytkownika</button>
+                                <button class="action-button ghost" type="button" id="user-clear">Wyczysc formularz</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <article class="card">
+                        <div class="card-head">
+                            <p class="eyebrow">Aktywacje</p>
+                            <h3>Stan progow i wysylek</h3>
+                        </div>
+                        <div id="active-rule-matches" class="stack-grid"></div>
+                        <div class="card-head section-head">
+                            <p class="eyebrow">Dziennik wysylek</p>
+                            <h3>Symulowane SMS i e-mail</h3>
+                        </div>
+                        <div id="dispatch-log" class="stack-grid"></div>
+                    </article>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

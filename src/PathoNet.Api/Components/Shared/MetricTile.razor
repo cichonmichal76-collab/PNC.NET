@@ -1,0 +1,11 @@
+<article class="metric-tile">
+    <span>@Label</span>
+    <strong>@Value</strong>
+    <small>@Caption</small>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Value { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public string Caption { get; set; } = string.Empty;
+}

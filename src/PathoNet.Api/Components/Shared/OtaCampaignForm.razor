@@ -1,0 +1,129 @@
+<div class="editor-form">
+    <label class="field">
+        <span>Nazwa kampanii</span>
+        <input @bind="Model.Title" type="text" placeholder="np. Rollout PNC Core 2.5.1" />
+    </label>
+    <div class="field-row">
+        <label class="field">
+            <span>Pakiet</span>
+            <select @bind="Model.PackageId">
+                @foreach (var package in Packages)
+                {
+                    <option value="@package.Id">@package.Name @package.Version</option>
+                }
+            </select>
+        </label>
+        <label class="field">
+            <span>Termin wysylki</span>
+            <input @bind-value="Model.ScheduledLocal" @bind-value:format="yyyy-MM-ddTHH:mm" type="datetime-local" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Transport</span>
+            <input @bind="Model.Transport" type="text" />
+        </label>
+        <label class="field">
+            <span>Okno</span>
+            <input @bind="Model.Window" type="text" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Retry</span>
+            <input @bind="Model.RetryLimit" type="number" min="0" max="10" />
+        </label>
+        <label class="check-chip">
+            <input @bind="Model.NotifyServiceByEmail" type="checkbox" />
+            <span>Wyslij e-mail do serwisu po wdrozeniu</span>
+        </label>
+    </div>
+    <div class="field">
+        <span>Docelowe PNC</span>
+        <div class="selection-grid">
+            @foreach (var device in Devices)
+            {
+                var isChecked = Model.TargetDeviceCodes.Contains(device.DeviceCode, StringComparer.OrdinalIgnoreCase);
+                <label class="selection-item">
+                    <input type="checkbox" checked="@isChecked" @onchange="args => ToggleTarget(device.DeviceCode, args.Value)" />
+                    <span>
+                        <strong>@device.Name</strong>
+                        <small>@device.DeviceCode | soft @device.Firmware | sygnal @device.BaseSignalPercent%</small>
+                    </span>
+                </label>
+            }
+        </div>
+    </div>
+    <div class="field">
+        <span>Odbiorcy e-maila</span>
+        <div class="selection-grid">
+            @foreach (var recipient in Recipients)
+            {
+                var isChecked = Model.RecipientIds.Contains(recipient.Id, StringComparer.OrdinalIgnoreCase);
+                <label class="selection-item">
+                    <input type="checkbox" checked="@isChecked" @onchange="args => ToggleRecipient(recipient.Id, args.Value)" />
+                    <span>
+                        <strong>@recipient.DisplayName</strong>
+                        <small>@recipient.Role | @recipient.Email</small>
+                    </span>
+                </label>
+            }
+        </div>
+    </div>
+    <label class="field">
+        <span>Opis wdrozenia</span>
+        <textarea @bind="Model.Notes" rows="3" placeholder="Opis celu kampanii, restartu i zalecen serwisowych"></textarea>
+    </label>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz kampanie</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowa kampania</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CampaignFormModel Model { get; set; } = default!;
+    [Parameter] public IReadOnlyList<PortalOtaPackageRecord> Packages { get; set; } = Array.Empty<PortalOtaPackageRecord>();
+    [Parameter] public IReadOnlyList<PncDeviceConfigRecord> Devices { get; set; } = Array.Empty<PncDeviceConfigRecord>();
+    [Parameter] public IReadOnlyList<PortalOtaServiceRecipientRecord> Recipients { get; set; } = Array.Empty<PortalOtaServiceRecipientRecord>();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private void ToggleTarget(string deviceCode, object? value)
+    {
+        if (AsBool(value))
+        {
+            if (!Model.TargetDeviceCodes.Contains(deviceCode, StringComparer.OrdinalIgnoreCase))
+            {
+                Model.TargetDeviceCodes.Add(deviceCode);
+            }
+        }
+        else
+        {
+            Model.TargetDeviceCodes.RemoveAll(code => string.Equals(code, deviceCode, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private void ToggleRecipient(string recipientId, object? value)
+    {
+        if (AsBool(value))
+        {
+            if (!Model.RecipientIds.Contains(recipientId, StringComparer.OrdinalIgnoreCase))
+            {
+                Model.RecipientIds.Add(recipientId);
+            }
+        }
+        else
+        {
+            Model.RecipientIds.RemoveAll(id => string.Equals(id, recipientId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+
+    private static bool AsBool(object? value) =>
+        value is bool boolValue
+            ? boolValue
+            : string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+}

@@ -1,0 +1,328 @@
+:root {
+    --bg: #03060c;
+    --panel: #0a1220;
+    --line: rgba(148, 163, 184, 0.18);
+    --text: #f7fbff;
+    --muted: #9db1ca;
+    --cyan: #22d3ee;
+    --green: #34d399;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --sans: "Bahnschrift", "Trebuchet MS", sans-serif;
+    --serif: "Rockwell", "Georgia", serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    font-family: var(--sans);
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 25%),
+        linear-gradient(160deg, #02050a 0%, #07111e 55%, #081524 100%);
+}
+
+.hdmi-kiosk {
+    user-select: none;
+}
+
+.wallboard-shell {
+    width: min(100vw - 24px, 1880px);
+    margin: 0 auto;
+    padding: 18px 0 24px;
+}
+
+.wallboard-header,
+.hdmi-panel,
+.tile,
+.alert-card,
+.wallboard-footer,
+.connection-banner,
+.overlay-card {
+    border: 1px solid var(--line);
+    background: rgba(7, 14, 25, 0.94);
+}
+
+.connection-banner {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 30;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 280px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+}
+
+.connection-banner strong {
+    font-size: 0.95rem;
+}
+
+.connection-banner span {
+    color: var(--muted);
+    font-size: 0.8rem;
+}
+
+.connection-banner.offline {
+    border-color: rgba(248, 113, 113, 0.5);
+    background: rgba(60, 9, 9, 0.94);
+}
+
+.connection-banner.online {
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+.offline-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: rgba(2, 6, 12, 0.74);
+    backdrop-filter: blur(12px);
+}
+
+.offline-overlay.hidden {
+    display: none;
+}
+
+.overlay-card {
+    width: min(720px, 100%);
+    padding: 28px;
+    border-radius: 28px;
+    text-align: center;
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45);
+}
+
+.overlay-card h2 {
+    margin-bottom: 12px;
+    font-size: clamp(1.9rem, 3vw, 3rem);
+}
+
+.overlay-copy {
+    margin: 0;
+    color: var(--muted);
+    font-size: 1.04rem;
+    line-height: 1.6;
+}
+
+.wallboard-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(360px, 0.9fr);
+    gap: 18px;
+    padding: 18px;
+    border-radius: 24px;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.72rem;
+}
+
+h1,
+h2 {
+    margin: 0;
+    font-family: var(--serif);
+    letter-spacing: 0.01em;
+}
+
+h1 {
+    font-size: clamp(2.4rem, 4vw, 4.8rem);
+    line-height: 0.92;
+}
+
+h2 {
+    font-size: 1.6rem;
+}
+
+.headline {
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 1.12rem;
+}
+
+.wallboard-stats {
+    display: grid;
+    gap: 12px;
+}
+
+.wallboard-stats article {
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.wallboard-stats span {
+    display: block;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.76rem;
+}
+
+.wallboard-stats strong {
+    display: block;
+    margin-top: 10px;
+    font-size: 1.3rem;
+}
+
+.wallboard-grid {
+    display: grid;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.wallboard-footer {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+    padding: 14px 18px;
+    border-radius: 18px;
+}
+
+.footer-block span {
+    display: block;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+}
+
+.footer-block strong {
+    display: block;
+    margin-top: 8px;
+    font-size: 1rem;
+}
+
+.hdmi-panel {
+    padding: 18px;
+    border-radius: 22px;
+}
+
+.panel-head {
+    margin-bottom: 16px;
+}
+
+.alert-strip,
+.tile-grid {
+    display: grid;
+    gap: 12px;
+}
+
+.alert-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tile-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.alert-card,
+.tile {
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.alert-card strong,
+.tile strong {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 1.12rem;
+}
+
+.alert-card p,
+.tile p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.55;
+}
+
+.status-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.pill::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 18px currentColor;
+}
+
+.info,
+.online {
+    color: #67e8f9;
+    background: rgba(34, 211, 238, 0.1);
+}
+
+.warn,
+.attention {
+    color: #fbbf24;
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.alarm,
+.critical,
+.error {
+    color: #fca5a5;
+    background: rgba(248, 113, 113, 0.12);
+}
+
+.health {
+    height: 12px;
+    margin-top: 16px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.health > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--red), var(--amber), var(--green));
+    transition: width 300ms ease;
+}
+
+@media (max-width: 1320px) {
+    .wallboard-header,
+    .alert-strip,
+    .tile-grid,
+    .wallboard-footer {
+        grid-template-columns: 1fr;
+    }
+
+    .connection-banner {
+        inset: auto 16px 16px 16px;
+        min-width: 0;
+    }
+}

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PathoNet Local PNC</title>
+    <link rel="stylesheet" href="/site.css">
+    <link rel="stylesheet" href="/blazor-shell.css">
+</head>
+<body data-page="local">
+    <div class="site-shell blazor-shell">
+        <div class="blazor-app-shell">
+            <aside class="blazor-sidebar">
+                <div class="sidebar-brand">
+                    <p class="eyebrow">PathoNet Local</p>
+                    <h1>Lokalny PNC</h1>
+                    <p class="lead-copy">Pulpit roboczy bezposrednio na urzadzeniu dla wezla PNC, zdrowia uslug i ekranu HDMI.</p>
+                </div>
+
+                <div class="sidebar-summary">
+                    <span class="pill soft">PNC :5000</span>
+                    <span class="pill soft">HDMI</span>
+                    <span class="pill soft">LTE</span>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <section class="nav-section">
+                        <p class="nav-caption">Centrum</p>
+                        <a class="nav-link is-current" href="/">Pulpit lokalny</a>
+                        <a class="nav-link" href="/blazor/pnc">PNC .NET</a>
+                        <a class="nav-link" href="/blazor/health">Zdrowie uslug</a>
+                    </section>
+
+                    <section class="nav-section">
+                        <p class="nav-caption">Lokalne narzedzia</p>
+                        <a class="nav-link" href="/blazor/serwis/hardware">Kreator podlaczenia</a>
+                        <a class="nav-link" href="/blazor/access">Panel uprawnien i dostepu</a>
+                        <a class="nav-link" href="/hdmi" target="_blank" rel="noreferrer">HDMI</a>
+                        <a class="nav-link" href="/api/diagnostics/snapshot" target="_blank" rel="noreferrer">Diagnostyka</a>
+                    </section>
+
+                    <section class="nav-section">
+                        <p class="nav-caption">Przejscia</p>
+                        <a class="nav-link" href="/host" data-target-port="5080" data-target-path="/blazor">Portal hosta</a>
+                        <a class="nav-link" href="/analysis" data-target-port="5080" data-target-path="/blazor/analiza">Analiza hosta</a>
+                        <a class="nav-link" href="/service" data-target-port="5080" data-target-path="/blazor/administracja">Administracja hosta</a>
+                    </section>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <strong>Ten port jest dedykowany dla lokalnej maszyny</strong>
+                    <p>Tu pracujesz na urzadzeniu, z szybkim dostepem do PNC, LTE, health i kiosku HDMI.</p>
+                </div>
+            </aside>
+
+            <div class="blazor-main">
+                <header class="blazor-pagebar">
+                    <div>
+                        <p class="eyebrow">Local :5000</p>
+                        <h2>Pulpit lokalny PNC</h2>
+                        <p class="lead-copy">Osobne wejscie dla lokalnej pracy na urzadzeniu, odseparowane od hostowego portalu operatorskiego.</p>
+                    </div>
+                    <div class="pagebar-actions">
+                        <a class="route-link" href="/hdmi" target="_blank" rel="noreferrer">HDMI</a>
+                        <a class="route-link" href="/host" data-target-port="5080" data-target-path="/blazor">Portal hosta</a>
+                    </div>
+                </header>
+
+                <main class="blazor-content">
+                    <section class="hero-band">
+                        <article class="hero-card">
+                            <p class="eyebrow">Lokalna maszyna</p>
+                            <h2 id="local-title">Ladowanie stanu PNC</h2>
+                            <p id="local-copy" class="hero-copy">Pobieram stan wezla, LTE i lokalnych uslug uruchomionych na urzadzeniu.</p>
+                            <div class="hero-inline">
+                                <span class="pill" id="local-status-pill">Ladowanie</span>
+                                <span class="pill soft" id="local-version">-</span>
+                                <span class="pill soft" id="local-last-heartbeat">-</span>
+                            </div>
+                        </article>
+                        <article class="hero-card accent">
+                            <p class="eyebrow">Szybki Start Lokalny</p>
+                            <div id="local-summary" class="mini-metric-grid"></div>
+                        </article>
+                    </section>
+
+                    <section class="route-grid" id="local-route-grid"></section>
+
+                    <section class="content-grid two-up">
+                        <article class="panel-card">
+                            <div class="panel-head">
+                                <p class="eyebrow">Urzadzenia nadrzedne</p>
+                                <h3>Flota lokalna PNC</h3>
+                            </div>
+                            <div id="local-pnc" class="device-grid-lite"></div>
+                        </article>
+
+                        <article class="panel-card">
+                            <div class="panel-head">
+                                <p class="eyebrow">LTE i heartbeat</p>
+                                <h3>Stan komunikacji</h3>
+                            </div>
+                            <div id="local-telemetry" class="stack-list"></div>
+                        </article>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script src="/pages.js"></script>
+</body>
+</html>

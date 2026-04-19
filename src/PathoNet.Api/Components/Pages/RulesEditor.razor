@@ -1,0 +1,386 @@
+@page "/blazor/rules"
+@attribute [Authorize(Policy = PathoNetPermissions.RulesView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie rulebooka...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null)
+{
+    var summary = _state.Summary;
+    var users = _state.Users;
+    var rules = _state.Rules;
+    var activeMatches = _state.ActiveMatches.Take(10).ToArray();
+    var dispatches = _state.Dispatches.Take(10).ToArray();
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <section class="panel-card">
+            <div class="pill-row">
+                <StatusBadge Tone="@_statusTone">Rulebook</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">Blazor Web App</StatusBadge>
+            </div>
+            <p>@_statusMessage</p>
+        </section>
+    }
+
+    <div class="form-actions">
+        <button class="action-button secondary" type="button" @onclick="RefreshAsync">Odswiez</button>
+        <a class="action-button secondary" href="/api/portal/rulebook" target="_blank" rel="noreferrer">API rulebook</a>
+    </div>
+
+    <MetricGrid>
+        <MetricTile Label="Uzytkownicy" Value="@summary.UserCount.ToString()" Caption="Zdefiniowani odbiorcy systemowi" />
+        <MetricTile Label="Reguly" Value="@summary.RuleCount.ToString()" Caption="@($"aktywne {summary.EnabledRuleCount}")" />
+        <MetricTile Label="Aktywacje" Value="@summary.ActiveMatchCount.ToString()" Caption="Dopasowania do surowki" />
+        <MetricTile Label="Progi" Value="@summary.EscalatedMatchCount.ToString()" Caption="Przekroczone czasy graniczne" />
+        <MetricTile Label="Wysylki" Value="@summary.DispatchCount.ToString()" Caption="SMS i e-mail z symulacji" />
+    </MetricGrid>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Reguly" Title="Aktualne mapowania komunikatow" />
+            <div class="stack-list">
+                @if (!rules.Any())
+                {
+                    <p class="empty-state">Brak regul biznesowych.</p>
+                }
+                else
+                {
+                    @foreach (var rule in rules)
+                    {
+                        var recipientNames = users
+                            .Where(user => rule.RecipientIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase))
+                            .Select(user => user.DisplayName)
+                            .ToArray();
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@(rule.Enabled ? "online" : "info")">@(rule.Enabled ? "aktywna" : "wylaczona")</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@MapMessageType(rule.MessageType)</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">prog @rule.ThresholdHours.ToString("0.##") h</StatusBadge>
+                            </div>
+                            <strong>@rule.Name</strong>
+                            <p class="mono">@rule.MatchText</p>
+                            <p>@rule.Description</p>
+                            <p class="detail-copy">
+                                SMS @(rule.SendSms ? "tak" : "nie") / e-mail @(rule.SendEmail ? "tak" : "nie") /
+                                odbiorcy @(recipientNames.Length == 0 ? "brak" : string.Join(", ", recipientNames))
+                            </p>
+                            @if (_canManage)
+                            {
+                                <div class="form-actions">
+                                    <button class="action-button secondary" type="button" @onclick="() => EditRule(rule)">Edytuj</button>
+                                    <button class="action-button danger" type="button" @onclick="() => DeleteRuleAsync(rule.Id)">Usun</button>
+                                </div>
+                            }
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Edytor reguly" Title="@(_ruleForm.RuleId is null ? "Nowa regula biznesowa" : $"Edycja: {_ruleForm.Name}")" />
+            @if (_canManage)
+            {
+                <RuleForm Model="_ruleForm" Users="users" OnSave="SaveRuleAsync" OnReset="ResetRuleForm" />
+            }
+            else
+            {
+                <p class="empty-state">Masz tylko podglad. Edycja regul wymaga uprawnienia <span class="mono">@PathoNetPermissions.RulesManage</span>.</p>
+            }
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Uzytkownicy" Title="Odbiorcy alertow i eskalacji" />
+            <div class="stack-list">
+                @if (!users.Any())
+                {
+                    <p class="empty-state">Brak odbiorcow systemowych.</p>
+                }
+                else
+                {
+                    @foreach (var user in users)
+                    {
+                        var recipientRuleCount = rules.Count(rule => rule.RecipientIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase));
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="info">@user.Role</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">reguly @recipientRuleCount</StatusBadge>
+                            </div>
+                            <strong>@user.DisplayName</strong>
+                            <p>@user.Email</p>
+                            <p class="detail-copy">@user.Phone</p>
+                            @if (_canManage)
+                            {
+                                <div class="form-actions">
+                                    <button class="action-button secondary" type="button" @onclick="() => EditUser(user)">Edytuj</button>
+                                    <button class="action-button danger" type="button" @onclick="() => DeleteUserAsync(user.Id)">Usun</button>
+                                </div>
+                            }
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Edytor uzytkownika" Title="@(_userForm.UserId is null ? "Nowy odbiorca systemu" : $"Edycja: {_userForm.DisplayName}")" />
+            @if (_canManage)
+            {
+                <UserForm Model="_userForm" OnSave="SaveUserAsync" OnReset="ResetUserForm" />
+            }
+            else
+            {
+                <p class="empty-state">Masz tylko podglad. Modyfikacja odbiorcow wymaga uprawnienia <span class="mono">@PathoNetPermissions.RulesManage</span>.</p>
+            }
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Aktywacje" Title="Aktualnie obserwowane dopasowania" />
+            <div class="stack-list">
+                @if (activeMatches.Length == 0)
+                {
+                    <p class="empty-state">Brak aktywnych dopasowan.</p>
+                }
+                else
+                {
+                    @foreach (var match in activeMatches)
+                    {
+                        var tone = match.ThresholdReached ? "critical" : match.Dispatched ? "online" : "info";
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@tone">@(match.ThresholdReached ? "prog" : match.Dispatched ? "wyslane" : "monitoring")</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@MapMessageType(match.MessageType)</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@match.Port</StatusBadge>
+                            </div>
+                            <strong>@match.RuleName</strong>
+                            <p>@match.LastMessage</p>
+                            <p class="detail-copy">
+                                Alias @match.Alias / trwa @match.ElapsedHours.ToString("0.##") h /
+                                odbiorcy @(match.Recipients.Length == 0 ? "brak" : string.Join(", ", match.Recipients))
+                            </p>
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Wysylki" Title="Dziennik eskalacji" />
+            <div class="stack-list">
+                @if (dispatches.Length == 0)
+                {
+                    <p class="empty-state">Brak wysylek w historii.</p>
+                }
+                else
+                {
+                    @foreach (var dispatch in dispatches)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="info">@dispatch.Channel</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@dispatch.Port</StatusBadge>
+                            </div>
+                            <strong>@dispatch.RuleName</strong>
+                            <p>@dispatch.Message</p>
+                            <p class="detail-copy">
+                                @dispatch.RecipientName / @dispatch.RecipientAddress /
+                                @dispatch.TriggeredAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")
+                            </p>
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+    </section>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private PortalRulebookStateRecord? _state;
+    private bool _loading = true;
+    private string? _error;
+    private string? _statusMessage;
+    private string _statusTone = "info";
+    private bool _canManage;
+    private RuleFormModel _ruleForm = RuleFormModel.CreateEmpty();
+    private UserFormModel _userForm = UserFormModel.CreateEmpty();
+
+    protected override async Task OnInitializedAsync() =>
+        await LoadAsync();
+
+    private Task RefreshAsync() =>
+        LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var principal = (await AuthenticationStateTask).User;
+            _canManage = principal.HasPermission(PathoNetPermissions.RulesManage);
+            _state = PortalService.GetRulebookState();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Nie udalo sie zaladowac rulebooka: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void EditRule(PortalMessageRuleRecord rule) =>
+        _ruleForm = RuleFormModel.FromRule(rule);
+
+    private void ResetRuleForm() =>
+        _ruleForm = RuleFormModel.CreateEmpty();
+
+    private async Task SaveRuleAsync()
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.SaveRuleAsync(
+            new BlazorRuleInputRecord(
+                _ruleForm.RuleId,
+                _ruleForm.Name,
+                _ruleForm.MatchText,
+                _ruleForm.MessageType,
+                _ruleForm.Description,
+                _ruleForm.ThresholdHours,
+                _ruleForm.SendSms,
+                _ruleForm.SendEmail,
+                _ruleForm.Enabled,
+                _ruleForm.RecipientIds.ToArray()),
+            CancellationToken.None);
+
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            ResetRuleForm();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteRuleAsync(string ruleId)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.DeleteRuleAsync(ruleId, CancellationToken.None);
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (string.Equals(_ruleForm.RuleId, ruleId, StringComparison.OrdinalIgnoreCase))
+            {
+                ResetRuleForm();
+            }
+
+            await LoadAsync();
+        }
+    }
+
+    private void EditUser(PortalUserRecord user) =>
+        _userForm = UserFormModel.FromUser(user);
+
+    private void ResetUserForm() =>
+        _userForm = UserFormModel.CreateEmpty();
+
+    private async Task SaveUserAsync()
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.SaveUserAsync(
+            new BlazorUserInputRecord(
+                _userForm.UserId,
+                _userForm.DisplayName,
+                _userForm.Role,
+                _userForm.Email,
+                _userForm.Phone),
+            CancellationToken.None);
+
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            ResetUserForm();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteUserAsync(string userId)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.DeleteUserAsync(userId, CancellationToken.None);
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (string.Equals(_userForm.UserId, userId, StringComparison.OrdinalIgnoreCase))
+            {
+                ResetUserForm();
+            }
+
+            await LoadAsync();
+        }
+    }
+
+    private static string MapMessageType(string value) =>
+        value switch
+        {
+            "alarm" => "Alarm",
+            "warn" => "Ostrzezenie",
+            "info" => "Informacja",
+            "error" => "Blad",
+            _ => "Dowolny"
+        };
+
+    private bool EnsureCanManage()
+    {
+        if (_canManage)
+        {
+            return true;
+        }
+
+        _statusMessage = $"Brak uprawnienia {PathoNetPermissions.RulesManage}.";
+        _statusTone = "critical";
+        return false;
+    }
+}

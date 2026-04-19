@@ -1,0 +1,225 @@
+{
+  "packages": [
+    {
+      "id": "pkg-pnc-core-2-5-0",
+      "name": "PNC Core",
+      "version": "2.5.0",
+      "target": "PNC OS",
+      "fileName": "pnc-core-2.5.0.bin",
+      "sizeMb": 128.4,
+      "description": "Pakiet systemowy dla wezlow PNC z poprawkami stabilnosci i telemetrii.",
+      "releaseNotes": "Poprawki OTA, nowszy agent LTE i rozszerzone logi wdrozeniowe.",
+      "mandatory": true
+    },
+    {
+      "id": "pkg-modem-1-8-4",
+      "name": "LTE Modem Bundle",
+      "version": "1.8.4",
+      "target": "Sterownik modemu",
+      "fileName": "lte-modem-1.8.4.swu",
+      "sizeMb": 32.7,
+      "description": "Aktualizacja firmware modemu i profili operatorow.",
+      "releaseNotes": "Lepsza obsluga roamingu, odczytu SIM i fallbacku LTE-M.",
+      "mandatory": false
+    },
+    {
+      "id": "pkg-ui-3-1-0",
+      "name": "PathoNet UI Runtime",
+      "version": "3.1.0",
+      "target": "Warstwa HMI",
+      "fileName": "pathonet-ui-3.1.0.pkg",
+      "sizeMb": 18.2,
+      "description": "Aktualizacja lokalnego runtime UI dla panelu klienta.",
+      "releaseNotes": "Nowe karty statusu i lepsze logowanie stanu aktualizacji.",
+      "mandatory": false
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "campaign-modem-nightly",
+      "title": "Aktualizacja modemu LTE dla wezlow terenowych",
+      "packageId": "pkg-modem-1-8-4",
+      "targetDeviceCodes": [
+        "PNC-004",
+        "PNC-005"
+      ],
+      "scheduledForUtc": "2026-04-17T16:54:32.8477335+00:00",
+      "transport": "LTE",
+      "window": "okno serwisowe 23:00-02:00",
+      "retryLimit": 3,
+      "notifyServiceByEmail": true,
+      "recipientIds": [
+        "serwis-centralny"
+      ],
+      "status": "completed",
+      "notes": "Pakiet radiowy z poprawa odczytu MCC/MNC, RSRP i SINR.",
+      "createdAtUtc": "2026-04-17T10:54:32.8477335+00:00",
+      "startedAtUtc": "2026-04-17T16:54:32.8477335+00:00",
+      "completedAtUtc": "2026-04-17T17:01:32.8477335+00:00"
+    },
+    {
+      "id": "campaign-core-rollout",
+      "title": "Rollout PNC Core 2.5.0",
+      "packageId": "pkg-pnc-core-2-5-0",
+      "targetDeviceCodes": [
+        "PNC-001",
+        "PNC-002"
+      ],
+      "scheduledForUtc": "2026-04-17T08:54:32.8477335+00:00",
+      "transport": "LTE",
+      "window": "okno serwisowe 01:00-04:00",
+      "retryLimit": 2,
+      "notifyServiceByEmail": true,
+      "recipientIds": [
+        "serwis-centralny",
+        "wdrozenia"
+      ],
+      "status": "completed",
+      "notes": "Aktualizacja bazowa dla dwoch wezlow nadrzednych z restartem kontrolowanym.",
+      "createdAtUtc": "2026-04-17T06:54:32.8477335+00:00",
+      "startedAtUtc": "2026-04-17T08:54:32.8477335+00:00",
+      "completedAtUtc": "2026-04-17T09:01:32.8477335+00:00"
+    }
+  ],
+  "serviceRecipients": [
+    {
+      "id": "serwis-centralny",
+      "displayName": "Serwis Centralny",
+      "role": "Serwis",
+      "email": "serwis@pathonet.local"
+    },
+    {
+      "id": "wdrozenia",
+      "displayName": "Dzial Wdrozen",
+      "role": "Wdrozenia",
+      "email": "wdrozenia@pathonet.local"
+    },
+    {
+      "id": "nadzor",
+      "displayName": "Nadzor Platformy",
+      "role": "Administrator",
+      "email": "nadzor@pathonet.local"
+    }
+  ],
+  "logs": [
+    {
+      "id": "log-campaign-modem-nightly-pnc-005-verify",
+      "campaignId": "campaign-modem-nightly",
+      "deviceCode": "PNC-005",
+      "level": "info",
+      "message": "Weryfikacja sumy kontrolnej, restart kontrolowany i test powdrozeniowy zakonczone powodzeniem na PNC Ambulatorium.",
+      "occurredAtUtc": "2026-04-17T17:00:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-modem-nightly-pnc-005-transfer",
+      "campaignId": "campaign-modem-nightly",
+      "deviceCode": "PNC-005",
+      "level": "info",
+      "message": "Pakiet lte-modem-1.8.4.swu dostarczony do PNC Ambulatorium; sygnal LTE 52% i firmware bazowy PNC-OS 2.3.7.",
+      "occurredAtUtc": "2026-04-17T16:59:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-modem-nightly-pnc-005-start",
+      "campaignId": "campaign-modem-nightly",
+      "deviceCode": "PNC-005",
+      "level": "info",
+      "message": "Rozpoczeto wysylke OTA pakietu LTE Modem Bundle 1.8.4 przez LTE.",
+      "occurredAtUtc": "2026-04-17T16:58:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-modem-nightly-pnc-004-verify",
+      "campaignId": "campaign-modem-nightly",
+      "deviceCode": "PNC-004",
+      "level": "info",
+      "message": "Weryfikacja sumy kontrolnej, restart kontrolowany i test powdrozeniowy zakonczone powodzeniem na PNC Logistyka.",
+      "occurredAtUtc": "2026-04-17T16:57:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-modem-nightly-pnc-004-transfer",
+      "campaignId": "campaign-modem-nightly",
+      "deviceCode": "PNC-004",
+      "level": "info",
+      "message": "Pakiet lte-modem-1.8.4.swu dostarczony do PNC Logistyka; sygnal LTE 74% i firmware bazowy PNC-OS 2.4.0.",
+      "occurredAtUtc": "2026-04-17T16:56:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-modem-nightly-pnc-004-start",
+      "campaignId": "campaign-modem-nightly",
+      "deviceCode": "PNC-004",
+      "level": "info",
+      "message": "Rozpoczeto wysylke OTA pakietu LTE Modem Bundle 1.8.4 przez LTE.",
+      "occurredAtUtc": "2026-04-17T16:55:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-core-rollout-pnc-002-verify",
+      "campaignId": "campaign-core-rollout",
+      "deviceCode": "PNC-002",
+      "level": "info",
+      "message": "Weryfikacja sumy kontrolnej, restart kontrolowany i test powdrozeniowy zakonczone powodzeniem na PNC OIOM.",
+      "occurredAtUtc": "2026-04-17T09:00:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-core-rollout-pnc-002-transfer",
+      "campaignId": "campaign-core-rollout",
+      "deviceCode": "PNC-002",
+      "level": "info",
+      "message": "Pakiet pnc-core-2.5.0.bin dostarczony do PNC OIOM; sygnal LTE 69% i firmware bazowy PNC-OS 2.4.1.",
+      "occurredAtUtc": "2026-04-17T08:59:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-core-rollout-pnc-002-start",
+      "campaignId": "campaign-core-rollout",
+      "deviceCode": "PNC-002",
+      "level": "info",
+      "message": "Rozpoczeto wysylke OTA pakietu PNC Core 2.5.0 przez LTE.",
+      "occurredAtUtc": "2026-04-17T08:58:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-core-rollout-pnc-001-verify",
+      "campaignId": "campaign-core-rollout",
+      "deviceCode": "PNC-001",
+      "level": "info",
+      "message": "Weryfikacja sumy kontrolnej, restart kontrolowany i test powdrozeniowy zakonczone powodzeniem na PNC Centrala 1.",
+      "occurredAtUtc": "2026-04-17T08:57:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-core-rollout-pnc-001-transfer",
+      "campaignId": "campaign-core-rollout",
+      "deviceCode": "PNC-001",
+      "level": "info",
+      "message": "Pakiet pnc-core-2.5.0.bin dostarczony do PNC Centrala 1; sygnal LTE 81% i firmware bazowy PNC-OS 2.4.1.",
+      "occurredAtUtc": "2026-04-17T08:56:32.8477335+00:00"
+    },
+    {
+      "id": "log-campaign-core-rollout-pnc-001-start",
+      "campaignId": "campaign-core-rollout",
+      "deviceCode": "PNC-001",
+      "level": "info",
+      "message": "Rozpoczeto wysylke OTA pakietu PNC Core 2.5.0 przez LTE.",
+      "occurredAtUtc": "2026-04-17T08:55:32.8477335+00:00"
+    }
+  ],
+  "emailLogs": [
+    {
+      "id": "email-campaign-modem-nightly",
+      "campaignId": "campaign-modem-nightly",
+      "subject": "PathoNet OTA: Aktualizacja modemu LTE dla wezlow terenowych",
+      "recipients": [
+        "serwis@pathonet.local"
+      ],
+      "sentAtUtc": "2026-04-17T17:02:32.8477335+00:00",
+      "body": "Automatyczne podsumowanie wdrozenia OTA.\nKampania: Aktualizacja modemu LTE dla wezlow terenowych\nPakiet: LTE Modem Bundle 1.8.4\nTransport: LTE\nStatus: completed\nCele: PNC-004, PNC-005\nSukces: 2\nBledy: 0\nOpis: Pakiet radiowy z poprawa odczytu MCC/MNC, RSRP i SINR."
+    },
+    {
+      "id": "email-campaign-core-rollout",
+      "campaignId": "campaign-core-rollout",
+      "subject": "PathoNet OTA: Rollout PNC Core 2.5.0",
+      "recipients": [
+        "serwis@pathonet.local",
+        "wdrozenia@pathonet.local"
+      ],
+      "sentAtUtc": "2026-04-17T09:02:32.8477335+00:00",
+      "body": "Automatyczne podsumowanie wdrozenia OTA.\nKampania: Rollout PNC Core 2.5.0\nPakiet: PNC Core 2.5.0\nTransport: LTE\nStatus: completed\nCele: PNC-001, PNC-002\nSukces: 2\nBledy: 0\nOpis: Aktualizacja bazowa dla dwoch wezlow nadrzednych z restartem kontrolowanym."
+    }
+  ]
+}

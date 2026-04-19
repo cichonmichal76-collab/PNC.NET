@@ -1,0 +1,61 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Interfejs</span>
+            <select @bind="Model.InterfaceType">
+                <option value="rs232">RS-232</option>
+                <option value="rs485">RS-485</option>
+                <option value="can">CAN</option>
+                <option value="ethernet">Ethernet</option>
+                <option value="digital-input">Digital input</option>
+                <option value="digital-output">Digital output</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Port</span>
+            <input @bind="Model.PortName" type="text" placeholder="np. COM1 / CAN-A / LAN1" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Urzadzenie</span>
+            <input @bind="Model.DeviceName" type="text" placeholder="np. Respirator Hamilton C6" />
+        </label>
+        <label class="field">
+            <span>Protokol</span>
+            <input @bind="Model.Protocol" type="text" placeholder="np. MODBUS RTU / TCP/IP" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Status</span>
+            <select @bind="Model.Status">
+                <option value="online">Online</option>
+                <option value="attention">Do obserwacji</option>
+                <option value="critical">Krytyczny</option>
+            </select>
+        </label>
+        <label class="field">
+            <span>Baud rate</span>
+            <input @bind="Model.BaudRate" type="number" min="1200" step="1" placeholder="dla RS-232 lub RS-485" />
+        </label>
+    </div>
+    <label class="field">
+        <span>Notatki</span>
+        <textarea @bind="Model.Notes" rows="3" placeholder="Opis instalacji, lokalizacji lub wymagan serwisowych."></textarea>
+    </label>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz polaczenie</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowe polaczenie</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ConnectionFormModel Model { get; set; } = default!;
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+}

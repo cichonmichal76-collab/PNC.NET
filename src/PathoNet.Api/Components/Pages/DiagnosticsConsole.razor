@@ -1,0 +1,108 @@
+@page "/blazor/diagnostyka"
+@attribute [Authorize(Policy = PathoNetPermissions.OtaView)]
+@inject SimulationStore SimulationStore
+
+@{
+    var portalState = SimulationStore.PortalState();
+    var diagnostics = SimulationStore.Snapshot();
+    var lte = portalState.Lte;
+    var lastNotifications = diagnostics.LastNotifications.Take(8).ToArray();
+    var lastHeartbeats = diagnostics.LastHeartbeats.Take(6).ToArray();
+}
+
+<section class="hero-band">
+    <article class="hero-card">
+        <p class="eyebrow">Diagnostyka sygnalow</p>
+        <h2>Surowe notify, heartbeaty i telemetryka collectora</h2>
+        <p class="hero-copy">
+            Ten ekran jest juz czescia docelowego frontendu Blazor i zastępuje techniczny podglad z legacy Razor Pages.
+            Sluzy do szybkiego sprawdzenia, co realnie plynie z collectora i urzadzen podpietych do PNC.
+        </p>
+    </article>
+
+    <article class="hero-card accent">
+        <p class="eyebrow">LTE i karta SIM</p>
+        <div class="stack-list">
+            <div class="stack-item">
+                <strong>@lte.OperatorName / @lte.NetworkType</strong>
+                <p class="detail-copy">SIM @lte.SimNumber / ICCID @lte.Iccid</p>
+                <p class="detail-copy">Sygnał @lte.SignalPercent% (@lte.SignalDbm dBm), jakość @lte.SignalQuality</p>
+            </div>
+        </div>
+    </article>
+</section>
+
+<MetricGrid>
+    <MetricTile Label="Notify" Value="@diagnostics.NotificationCount.ToString()" Caption="Wszystkie komunikaty z collectora" />
+    <MetricTile Label="Heartbeaty" Value="@diagnostics.HeartbeatCount.ToString()" Caption="Sygnał życia węzła" />
+    <MetricTile Label="Aktywne porty" Value="@diagnostics.ActivePorts.Length.ToString()" Caption="Porty widoczne w snapshotcie" />
+    <MetricTile Label="PNC" Value="@diagnostics.PncCount.ToString()" Caption="Węzły w bieżącej flocie" />
+    <MetricTile Label="Reguły" Value="@diagnostics.RuleCount.ToString()" Caption="Aktywne mapowania i progi" />
+    <MetricTile Label="Wysyłki" Value="@diagnostics.DispatchCount.ToString()" Caption="Eskalacje i komunikacja serwisowa" />
+</MetricGrid>
+
+<section class="content-grid two-up">
+    <article class="panel-card">
+        <SectionHeader Eyebrow="Ostatnie notify" Title="Surowe komunikaty wejścia" />
+        <div class="stack-list">
+            @if (!lastNotifications.Any())
+            {
+                <p class="empty-state">Brak notyfikacji.</p>
+            }
+            else
+            {
+                @foreach (var notification in lastNotifications)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@MapTone(notification.Level)">@notification.Level</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@notification.Port</StatusBadge>
+                        </div>
+                        <strong>@notification.Alias</strong>
+                        <p>@notification.Text</p>
+                        <p class="detail-copy">@notification.Meta.DateMess / exported @(notification.Meta.Exported ? "tak" : "nie")</p>
+                    </article>
+                }
+            }
+        </div>
+    </article>
+
+    <article class="panel-card">
+        <SectionHeader Eyebrow="Heartbeaty" Title="Sygnał życia węzła" />
+        <div class="stack-list">
+            @if (!lastHeartbeats.Any())
+            {
+                <p class="empty-state">Brak heartbeatów.</p>
+            }
+            else
+            {
+                @foreach (var heartbeat in lastHeartbeats)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="info">@heartbeat.ClientName</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@heartbeat.CurrentVersion</StatusBadge>
+                        </div>
+                        <strong>@heartbeat.DeviceId</strong>
+                        <p class="detail-copy">portów @heartbeat.PortCount / topic @heartbeat.Topic</p>
+                    </article>
+                }
+            }
+        </div>
+    </article>
+</section>
+
+@code {
+    private static string MapTone(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "online" => "online",
+            "completed" => "online",
+            "warn" => "attention",
+            "attention" => "attention",
+            "alarm" => "critical",
+            "error" => "critical",
+            "critical" => "critical",
+            _ => "info"
+        };
+}

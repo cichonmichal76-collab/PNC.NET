@@ -1,0 +1,409 @@
+@page "/blazor"
+@attribute [Authorize(Policy = PathoNetPermissions.DashboardView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie dashboardu administratora...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null)
+{
+    var overview = _state.PortalState.Overview;
+    var filteredDevices = FilteredDevices;
+    var activityBars = ActivityBars;
+    var topLocations = TopLocations;
+    var interventionDevices = InterventionDevices;
+    var deviceTypes = DeviceTypeBreakdown;
+    var recentEvents = RecentEvents;
+
+    <section class="dashboard-surface">
+        <section class="dashboard-kpi-grid">
+            <article class="dashboard-kpi-card violet fleet-kpi-card">
+                <div class="fleet-status-summary">
+                    <span class="dashboard-kpi-label">Wszystkie</span>
+                    <strong>@TotalDevices</strong>
+                    <div class="fleet-status-list">
+                        <div class="fleet-status-row">
+                            <span class="fleet-status-dot online pulse"></span>
+                            <span>Online</span>
+                            <strong>@OnlineCount</strong>
+                        </div>
+                        <div class="fleet-status-row">
+                            <span class="fleet-status-dot offline"></span>
+                            <span>Offline</span>
+                            <strong>@OfflineCount</strong>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="dashboard-kpi-card orange">
+                <span class="dashboard-kpi-icon">I/O</span>
+                <div>
+                    <span class="dashboard-kpi-label">Podlaczone urzadzenia</span>
+                    <strong>@TotalConnectedEndpoints</strong>
+                    <small>RS-232 @TotalRs232Connections / RS-485 @TotalRs485Connections / CAN @TotalCanConnections / ETH @TotalEthernetConnections</small>
+                </div>
+            </article>
+
+            <article class="dashboard-kpi-card teal">
+                <span class="dashboard-kpi-icon">OBS</span>
+                <div>
+                    <span class="dashboard-kpi-label">Obiekty z integracja</span>
+                    <strong>@ConnectedNodeCount</strong>
+                    <small>@TotalHospitalsCount szpitali / @TotalDeviceTypeCount typow urzadzen</small>
+                </div>
+            </article>
+
+            <article class="dashboard-kpi-card blue">
+                <span class="dashboard-kpi-icon">AL</span>
+                <div>
+                    <span class="dashboard-kpi-label">Alerty i interwencje</span>
+                    <strong>@AttentionCount</strong>
+                    <small>@_state.PortalState.Alerts.Length alertow / @InterventionCount do interwencji</small>
+                </div>
+            </article>
+        </section>
+
+        <section class="dashboard-main-grid">
+            <article class="dashboard-mini-spotlight">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Flota po filtrach</p>
+                        <h3>Widzisz aktywny wycinek integracji</h3>
+                    </div>
+                    <span class="dashboard-trend positive">@FilteredHospitalsCount szpitali</span>
+                </header>
+                <strong class="dashboard-spotlight-value">@FilteredConnectedEndpoints</strong>
+                <p class="dashboard-spotlight-copy">Tyle urzadzen nadawczych jest teraz widocznych po aktywnych filtrach lokalizacji, statusu i typu integracji.</p>
+                <div class="dashboard-wave-bars">
+                    @foreach (var location in topLocations.Take(6))
+                    {
+                        <span class="dashboard-wave-bar" style="@($"height:{location.Intensity}%")"></span>
+                    }
+                </div>
+            </article>
+
+            <article class="dashboard-activity-panel">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Aktywnosc operacyjna</p>
+                        <h3>Ruch i presja zdarzen</h3>
+                    </div>
+                    <div class="pill-row">
+                        <StatusBadge Kind="chip" Tone="info">heartbeat @overview.HeartbeatCount</StatusBadge>
+                        <StatusBadge Kind="chip" Tone="info">notify @overview.NotificationCount</StatusBadge>
+                    </div>
+                </header>
+
+                <div class="dashboard-activity-chart">
+                    @foreach (var bar in activityBars)
+                    {
+                        <article class="dashboard-activity-column">
+                            <div class="dashboard-activity-rails">
+                                <span class="dashboard-activity-bar sales" style="@($"height:{bar.SalesHeight}%")"></span>
+                                <span class="dashboard-activity-bar alerts" style="@($"height:{bar.AlertHeight}%")"></span>
+                                <span class="dashboard-activity-bar health" style="@($"height:{bar.HealthHeight}%")"></span>
+                            </div>
+                            <strong>@bar.Label</strong>
+                            <small>@bar.Total zdarzen</small>
+                        </article>
+                    }
+                </div>
+
+                <div class="dashboard-legend">
+                    <span><i class="dot sales"></i> aktywnosc</span>
+                    <span><i class="dot alerts"></i> alarmy/warn</span>
+                    <span><i class="dot health"></i> stabilnosc</span>
+                </div>
+            </article>
+
+            <div class="dashboard-side-stack">
+                <article class="dashboard-status-card">
+                    <header class="dashboard-panel-head">
+                        <div>
+                            <p class="eyebrow">Pokrycie integracji</p>
+                            <h3>Aktywne wezly z podlaczeniami</h3>
+                        </div>
+                        <span class="dashboard-trend @(IntegrationCoveragePercent >= 75 ? "positive" : "negative")">@IntegrationCoveragePercent%</span>
+                    </header>
+                    <div class="dashboard-ring-wrap">
+                        <div class="dashboard-ring" style="@($"--progress:{IntegrationCoveragePercent};")">
+                            <div class="dashboard-ring-inner">
+                                <strong>@IntegrationCoveragePercent%</strong>
+                                <span>pokrycie</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-split-stats">
+                        <div>
+                            <span>PNC z integracja</span>
+                            <strong>@ConnectedNodeCount</strong>
+                            <small>wezly z aktywnym I/O</small>
+                        </div>
+                        <div>
+                            <span>Nadajniki</span>
+                            <strong>@TotalConnectedEndpoints</strong>
+                            <small>podlaczone urzadzenia</small>
+                        </div>
+                        <div>
+                            <span>Interfejsy</span>
+                            <strong>@ActiveInterfaceFamilyCount</strong>
+                            <small>rodzaje komunikacji</small>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="dashboard-side-callout mint">
+                    <div>
+                        <strong>@FilteredOnlineCount online</strong>
+                        <p>W aktualnym widoku tyle PNC pracuje i raportuje dane do wspolnej floty.</p>
+                    </div>
+                    <span>@FilteredDevices.Length</span>
+                </article>
+
+                <article class="dashboard-side-callout amber">
+                    <div>
+                        <strong>@TotalHospitalsCount szpitali</strong>
+                        <p>Flota jest rozlozona na tylu obiektach i typach integracji w obecnym mocku operacyjnym.</p>
+                    </div>
+                    <span>@TotalDeviceTypeCount</span>
+                </article>
+            </div>
+        </section>
+
+        <section class="dashboard-lower-grid">
+            <article class="dashboard-panel-card span-two">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Filtry floty</p>
+                        <h3>Stan floty i integracji</h3>
+                    </div>
+                    <div class="dashboard-inline-actions">
+                        <button class="action-button secondary" type="button" @onclick="ResetFilters">Wyczysc filtry</button>
+                        <a class="action-button secondary" href="/blazor/urzadzenia">Pelny widok urzadzen</a>
+                    </div>
+                </header>
+                <p class="dashboard-section-intro">
+                    Strona Start pokazuje zagregowany obraz floty: ile PNC pracuje, ile urzadzen nadawczych jest podlaczonych i jak rozkladaja sie interfejsy komunikacyjne.
+                </p>
+
+                <div class="dashboard-filter-grid">
+                    <label class="field">
+                        <span>Status</span>
+                        <select @bind="_statusFilter">
+                            <option value="">Wszystkie</option>
+                            <option value="online">Online</option>
+                            <option value="offline">Offline</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Wojewodztwo</span>
+                        <select @bind="_provinceFilter">
+                            <option value="">Wszystkie</option>
+                            @foreach (var province in AvailableProvinces)
+                            {
+                                <option value="@province">@province</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Miasto</span>
+                        <select @bind="_cityFilter">
+                            <option value="">Wszystkie</option>
+                            @foreach (var city in AvailableCities)
+                            {
+                                <option value="@city">@city</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Szpital</span>
+                        <select @bind="_hospitalFilter">
+                            <option value="">Wszystkie</option>
+                            @foreach (var hospital in AvailableHospitals)
+                            {
+                                <option value="@hospital">@hospital</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>Typ urzadzenia</span>
+                        <select @bind="_deviceTypeFilter">
+                            <option value="">Wszystkie</option>
+                            @foreach (var deviceType in AvailableDeviceTypes)
+                            {
+                                <option value="@deviceType">@deviceType</option>
+                            }
+                        </select>
+                    </label>
+                </div>
+
+                <div class="dashboard-device-grid">
+                    @if (filteredDevices.Length == 0)
+                    {
+                        <div class="empty-state-box">
+                            <strong>Nic nie pasuje do tego zestawu filtrow.</strong>
+                            <p>Sprobuj wyczyscic filtry albo zawezic widok do innego regionu, szpitala lub typu integracji.</p>
+                            <button class="action-button secondary" type="button" @onclick="ResetFilters">Wyczysc wszystko</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredDevices.Length</h4>
+                            <p>PNC w widoku</p>
+                            <p class="detail-copy">Aktualny wycinek floty po zastosowanych filtrach.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredOnlineCount</h4>
+                            <p>Aktywne PNC</p>
+                            <p class="detail-copy">@FilteredOfflineCount offline / wezly raportujace teraz do systemu.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredConnectedEndpoints</h4>
+                            <p>Podlaczone urzadzenia</p>
+                            <p class="detail-copy">Suma aktywnych torow nadawczych widocznych w biezacym widoku.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredRs232Connections</h4>
+                            <p>RS-232</p>
+                            <p class="detail-copy">Urzadzenia szeregowe podpiete do wezlow z tego widoku.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredRs485Connections</h4>
+                            <p>RS-485</p>
+                            <p class="detail-copy">Polaczenia magistralowe i konfiguracje multi-drop.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredCanConnections</h4>
+                            <p>CAN</p>
+                            <p class="detail-copy">Moduly i sterowniki raportowane przez magistrale CAN.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredEthernetConnections</h4>
+                            <p>Ethernet / IP</p>
+                            <p class="detail-copy">Urzadzenia sieciowe i lokalne integracje po ETH.</p>
+                        </article>
+                        <article class="dashboard-device-card">
+                            <h4>@FilteredHospitalsCount / @FilteredDeviceTypeCount</h4>
+                            <p>Szpitale / typy</p>
+                            <p class="detail-copy">Obiekty i klasy urzadzen obecne w aktywnym zestawie filtrow.</p>
+                        </article>
+                    }
+                </div>
+            </article>
+
+            <article class="dashboard-panel-card">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Do interwencji</p>
+                        <h3>Wezly z najwyzszym ryzykiem</h3>
+                    </div>
+                    <a class="route-link" href="/blazor/serwis">Serwis</a>
+                </header>
+                <div class="dashboard-list">
+                    @foreach (var device in interventionDevices)
+                    {
+                        <article class="dashboard-list-item">
+                            <div>
+                                <strong>@device.Name</strong>
+                                <p>@device.Hospital / @device.City</p>
+                            </div>
+                            <div class="dashboard-list-meta">
+                                <span class="chip @(device.IsOnline ? "attention" : "critical")">@(device.IsOnline ? "uwaga" : "offline")</span>
+                                <strong>@device.HealthScore%</strong>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </article>
+
+            <article class="dashboard-panel-card">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Lokalizacje</p>
+                        <h3>Top wojewodztwa i obiekty</h3>
+                    </div>
+                    <span class="dashboard-trend positive">@topLocations.Length rekordow</span>
+                </header>
+                <div class="dashboard-list">
+                    @foreach (var location in topLocations)
+                    {
+                        <article class="dashboard-list-item">
+                            <div>
+                                <strong>@location.Label</strong>
+                                <p>@location.Detail</p>
+                            </div>
+                            <div class="dashboard-list-meta">
+                                <span class="dashboard-meter">
+                                    <span style="@($"width:{location.Intensity}%")"></span>
+                                </span>
+                                <strong>@location.Count</strong>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </article>
+
+            <article class="dashboard-panel-card">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Ostatnia aktywnosc</p>
+                        <h3>Historia komunikatow</h3>
+                    </div>
+                    <a class="route-link" href="/blazor/analiza">Analiza</a>
+                </header>
+                <div class="dashboard-feed">
+                    @foreach (var item in recentEvents)
+                    {
+                        <article class="dashboard-feed-item">
+                            <span class="dashboard-feed-dot @MapTone(item.Level)"></span>
+                            <div>
+                                <strong>@item.DisplayName</strong>
+                                <p>@item.Message</p>
+                                <small>@item.OccurredAt / @item.Port</small>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </article>
+
+            <article class="dashboard-panel-card">
+                <header class="dashboard-panel-head">
+                    <div>
+                        <p class="eyebrow">Typy urzadzen</p>
+                        <h3>Rozklad integracji</h3>
+                    </div>
+                    <a class="route-link" href="/blazor/przeglad">Przeglad</a>
+                </header>
+                <div class="dashboard-list">
+                    @foreach (var type in deviceTypes)
+                    {
+                        <article class="dashboard-list-item">
+                            <div>
+                                <strong>@type.Label</strong>
+                                <p>@type.Detail</p>
+                            </div>
+                            <div class="dashboard-list-meta">
+                                <span class="dashboard-meter">
+                                    <span style="@($"width:{type.Intensity}%")"></span>
+                                </span>
+                                <strong>@type.Count</strong>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </article>
+        </section>
+    </section>
+}

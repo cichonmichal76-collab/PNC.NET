@@ -1,0 +1,28 @@
+<article class="panel-card">
+    <SectionHeader Eyebrow="Krok 7" Title="Zapisz konfiguracje i zakoncz commissioning" />
+    @if (SelectedPort is null)
+    {
+        <p class="empty-state">Brak wybranego portu do zapisania.</p>
+    }
+    else
+    {
+        <div class="stack-list">
+            <article class="stack-item">
+                <strong>Podsumowanie portu</strong>
+                <p>@SelectedPort.PortId / @SelectedPort.Alias / @SelectedPort.InterfaceType</p>
+                <p class="detail-copy">sciezka @SelectedPort.DevicePath / parser @SelectedPort.ParserKind / framing @SelectedPort.FrameMode</p>
+                <p class="detail-copy">serial @SelectedPort.BaudRate-@SelectedPort.DataBits-@SelectedPort.Parity-@SelectedPort.StopBits / fallback @(SelectedPort.AllowSimulationFallback ? "tak" : "nie")</p>
+            </article>
+            <article class="stack-item">
+                <strong>Co stanie sie po zapisie</strong>
+                <p class="detail-copy">Zmiana trafi do konfiguracji collectora. Jesli wybierzesz restart, collector zostanie ponownie uruchomiony i zacznie pracowac na nowych nastawach.</p>
+                <p class="detail-copy">@(ConfigState?.RestartHint ?? "Po zmianie parametrow zrestartuj collectora.")</p>
+            </article>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter] public CollectorPortConfigRecord? SelectedPort { get; set; }
+    [Parameter] public CollectorHardwareConfigStateRecord? ConfigState { get; set; }
+}

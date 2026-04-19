@@ -1,0 +1,154 @@
+@implements IAsyncDisposable
+
+<article class="ethernet-demo-card">
+    <div class="hardware-visual-panel-head">
+        <div>
+            <strong>Demo animacji ETH1</strong>
+            <p class="detail-copy">Proof of concept dla sekwencji: puste gniazdo, wlozenie wtyczki i transmisja danych. Ten panel dziala niezaleznie od runtime collectora.</p>
+        </div>
+        <div class="pill-row">
+            <StatusBadge Kind="chip" Tone="info">PoC</StatusBadge>
+            <StatusBadge Kind="chip" Tone="info">ETH1</StatusBadge>
+        </div>
+    </div>
+
+    <div class="ethernet-demo-stage @StateClass">
+        <div class="ethernet-demo-scene">
+            <div class="ethernet-demo-label">ETH1</div>
+
+            <div class="ethernet-demo-port-shell">
+                <span class="ethernet-demo-led left"></span>
+                <span class="ethernet-demo-led right"></span>
+
+                <div class="ethernet-demo-port-opening">
+                    <div class="ethernet-demo-contacts"></div>
+
+                    <div class="ethernet-demo-traffic" aria-hidden="true">
+                        <span class="ethernet-demo-arrow tx">→</span>
+                        <span class="ethernet-demo-dot a"></span>
+                        <span class="ethernet-demo-dot b"></span>
+                        <span class="ethernet-demo-dot c"></span>
+                        <span class="ethernet-demo-arrow rx">←</span>
+                    </div>
+                </div>
+
+                <div class="ethernet-demo-plug" aria-hidden="true">
+                    <div class="ethernet-demo-plug-head">
+                        <span class="ethernet-demo-plug-latch"></span>
+                        <span class="ethernet-demo-plug-contacts"></span>
+                    </div>
+                    <div class="ethernet-demo-plug-body">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <div class="ethernet-demo-cable"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="ethernet-demo-controls">
+        <button class="@GetButtonClass(DemoState.Empty)"
+                type="button"
+                @onclick="() => SetState(DemoState.Empty)">
+            Puste gniazdo
+        </button>
+        <button class="@GetButtonClass(DemoState.Plugged)"
+                type="button"
+                @onclick="() => SetState(DemoState.Plugged)">
+            Wtyczka
+        </button>
+        <button class="@GetButtonClass(DemoState.Traffic)"
+                type="button"
+                @onclick="() => SetState(DemoState.Traffic)">
+            Transmisja
+        </button>
+    </div>
+</article>
+
+@code {
+    private readonly TimeSpan _emptyDuration = TimeSpan.FromSeconds(1.3);
+    private readonly TimeSpan _pluggedDuration = TimeSpan.FromSeconds(1.6);
+    private readonly TimeSpan _trafficDuration = TimeSpan.FromSeconds(1.8);
+
+    private CancellationTokenSource? _loopCts;
+    private DemoState _state = DemoState.Empty;
+
+    private string StateClass => _state switch
+    {
+        DemoState.Empty => "is-empty",
+        DemoState.Plugged => "is-plugged",
+        DemoState.Traffic => "is-traffic",
+        _ => "is-empty"
+    };
+
+    protected override void OnInitialized()
+    {
+        _loopCts = new CancellationTokenSource();
+        _ = RunLoopAsync(_loopCts.Token);
+    }
+
+    private async Task RunLoopAsync(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            var delay = _state switch
+            {
+                DemoState.Empty => _emptyDuration,
+                DemoState.Plugged => _pluggedDuration,
+                DemoState.Traffic => _trafficDuration,
+                _ => _emptyDuration
+            };
+
+            try
+            {
+                await Task.Delay(delay, cancellationToken);
+            }
+            catch (TaskCanceledException)
+            {
+                return;
+            }
+
+            _state = _state switch
+            {
+                DemoState.Empty => DemoState.Plugged,
+                DemoState.Plugged => DemoState.Traffic,
+                DemoState.Traffic => DemoState.Empty,
+                _ => DemoState.Empty
+            };
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private void SetState(DemoState state)
+    {
+        _state = state;
+    }
+
+    private string GetButtonClass(DemoState state) =>
+        _state == state
+            ? "action-button primary"
+            : "action-button secondary";
+
+    public ValueTask DisposeAsync()
+    {
+        if (_loopCts is not null)
+        {
+            _loopCts.Cancel();
+            _loopCts.Dispose();
+            _loopCts = null;
+        }
+
+        return ValueTask.CompletedTask;
+    }
+
+    private enum DemoState
+    {
+        Empty,
+        Plugged,
+        Traffic
+    }
+}

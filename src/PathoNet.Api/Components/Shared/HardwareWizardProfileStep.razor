@@ -1,0 +1,37 @@
+@using PathoNet.Api.Components.Pages
+
+<article class="panel-card">
+    <SectionHeader Eyebrow="Krok 4" Title="Dobierz profil komunikacji" />
+    @if (SelectedPort is null)
+    {
+        <p class="empty-state">Najpierw wybierz port w kroku 3.</p>
+    }
+    else if (Profiles.Count == 0)
+    {
+        <p class="empty-state">Dla tego interfejsu nie ma jeszcze gotowych profili. Przejdz dalej z konfiguracja reczna.</p>
+    }
+    else
+    {
+        <p class="detail-copy">Wybierz profil najblizszy urzadzeniu. Formularz w kolejnym kroku uzupelni parametry automatycznie, ale dalej mozna je zmienic recznie.</p>
+        <div class="wizard-profile-grid">
+            @foreach (var profile in Profiles)
+            {
+                var isCurrent = string.Equals(profile.Name, SelectedProfileName, StringComparison.OrdinalIgnoreCase);
+                <button class="wizard-profile-card @(isCurrent ? "is-selected" : string.Empty)"
+                        type="button"
+                        @onclick="() => OnApplyProfile.InvokeAsync(profile)">
+                    <strong>@profile.Name</strong>
+                    <p>@profile.Description</p>
+                    <p class="detail-copy">@profile.InterfaceType / @profile.BaudRate-@profile.DataBits-@profile.Parity-@profile.StopBits</p>
+                </button>
+            }
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter] public CollectorPortConfigRecord? SelectedPort { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<HardwarePortProfileDefinition> Profiles { get; set; } = [];
+    [Parameter] public string? SelectedProfileName { get; set; }
+    [Parameter] public EventCallback<HardwarePortProfileDefinition> OnApplyProfile { get; set; }
+}

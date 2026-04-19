@@ -1,0 +1,403 @@
+@page "/blazor/ota"
+@attribute [Authorize(Policy = PathoNetPermissions.OtaView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie OTA...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null)
+{
+    var packages = _state.OtaState.Packages;
+    var campaigns = _state.OtaState.Campaigns;
+    var logs = _state.OtaState.Logs.Take(8).ToArray();
+    var emails = _state.OtaState.EmailLogs.Take(4).ToArray();
+    var summary = _state.OtaState.Summary;
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <section class="panel-card">
+            <div class="pill-row">
+                <StatusBadge Tone="@_statusTone">OTA</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">Blazor Web App</StatusBadge>
+            </div>
+            <p>@_statusMessage</p>
+        </section>
+    }
+
+    <div class="form-actions">
+        <button class="action-button secondary" type="button" @onclick="RefreshAsync">Odswiez</button>
+        <a class="action-button secondary" href="/api/portal/ota" target="_blank" rel="noreferrer">API OTA</a>
+    </div>
+
+    <MetricGrid>
+        <MetricTile Label="Pakiety" Value="@summary.PackageCount.ToString()" Caption="Repozytorium OTA" />
+        <MetricTile Label="Kampanie" Value="@summary.CampaignCount.ToString()" Caption="@($"zaplanowane {summary.ScheduledCount}")" />
+        <MetricTile Label="Zakonczone" Value="@summary.CompletedCount.ToString()" Caption="@($"czesciowe {summary.PartialCount}")" />
+        <MetricTile Label="Nieudane" Value="@summary.FailedCount.ToString()" Caption="Wymagaja reakcji serwisu" />
+        <MetricTile Label="E-maile" Value="@summary.EmailCount.ToString()" Caption="Podsumowania po wdrozeniu" />
+    </MetricGrid>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Paczki OTA" Title="Aktualne pakiety software" />
+            <div class="stack-list">
+                @if (!packages.Any())
+                {
+                    <p class="empty-state">Brak paczek OTA.</p>
+                }
+                else
+                {
+                    @foreach (var package in packages)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@(package.Mandatory ? "critical" : "info")">@(package.Mandatory ? "wymagana" : "opcjonalna")</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@package.Target</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@package.SizeMb MB</StatusBadge>
+                            </div>
+                            <strong>@package.Name @package.Version</strong>
+                            <p>@package.Description</p>
+                            <p class="detail-copy">@package.FileName</p>
+                            @if (_canManage)
+                            {
+                                <div class="form-actions">
+                                    <button class="action-button secondary" type="button" @onclick="() => EditPackage(package)">Edytuj</button>
+                                    <button class="action-button danger" type="button" @onclick="() => DeletePackageAsync(package.Id)">Usun pakiet</button>
+                                </div>
+                            }
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Edytor pakietu" Title="@(_packageForm.PackageId is null ? "Nowy pakiet OTA" : $"Edycja: {_packageForm.Name} {_packageForm.Version}")" />
+            @if (_canManage)
+            {
+                <OtaPackageForm Model="_packageForm" OnSave="SavePackageAsync" OnReset="ResetPackageForm" />
+            }
+            else
+            {
+                <p class="empty-state">Masz tylko podglad. Edycja OTA wymaga uprawnienia <span class="mono">@PathoNetPermissions.OtaManage</span>.</p>
+            }
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Kampanie" Title="Harmonogram wysylek przez LTE" />
+            <div class="stack-list">
+                @if (!campaigns.Any())
+                {
+                    <p class="empty-state">Brak kampanii OTA.</p>
+                }
+                else
+                {
+                    @foreach (var campaign in campaigns)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@MapCampaignTone(campaign.Status)">@campaign.Status</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@campaign.PackageName @campaign.PackageVersion</StatusBadge>
+                            </div>
+                            <strong>@campaign.Title</strong>
+                            <p>@campaign.Summary</p>
+                            <p class="detail-copy">
+                                @campaign.ScheduledForUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm") /
+                                @campaign.Transport / cele @campaign.TargetCount / retry @campaign.RetryLimit
+                            </p>
+                            <div class="chip-row">
+                                @foreach (var target in campaign.TargetLabels)
+                                {
+                                    <StatusBadge Kind="chip" Tone="info">@target</StatusBadge>
+                                }
+                            </div>
+                            @if (_canManage)
+                            {
+                                <div class="form-actions">
+                                    <button class="action-button secondary" type="button" @onclick="() => EditCampaign(campaign)">Edytuj</button>
+                                    <button class="action-button danger" type="button" @onclick="() => DeleteCampaignAsync(campaign.Id)">Usun kampanie</button>
+                                </div>
+                            }
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Edytor kampanii" Title="@(_campaignForm.CampaignId is null ? "Nowa kampania OTA" : $"Edycja: {_campaignForm.Title}")" />
+            @if (_canManage)
+            {
+                <OtaCampaignForm
+                    Model="_campaignForm"
+                    Packages="packages"
+                    Devices="_state.FleetState.PncDevices"
+                    Recipients="_state.OtaState.ServiceRecipients"
+                    OnSave="SaveCampaignAsync"
+                    OnReset="ResetCampaignForm" />
+            }
+            else
+            {
+                <p class="empty-state">Masz tylko podglad. Planowanie kampanii OTA wymaga uprawnienia <span class="mono">@PathoNetPermissions.OtaManage</span>.</p>
+            }
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Logi" Title="Przebieg aktualizacji" />
+            <div class="stack-list">
+                @if (logs.Length == 0)
+                {
+                    <p class="empty-state">Brak logow OTA.</p>
+                }
+                else
+                {
+                    @foreach (var log in logs)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@MapLogTone(log.Level)">@log.Level</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@log.DeviceCode</StatusBadge>
+                            </div>
+                            <strong>@log.CampaignId</strong>
+                            <p>@log.Message</p>
+                            <p class="detail-copy">@log.OccurredAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss")</p>
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="E-mail" Title="Powiadomienia po wdrozeniu" />
+            <div class="stack-list">
+                @if (emails.Length == 0)
+                {
+                    <p class="empty-state">Brak e-maili powdrozeniowych.</p>
+                }
+                else
+                {
+                    @foreach (var email in emails)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="info">e-mail</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@email.SentAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</StatusBadge>
+                            </div>
+                            <strong>@email.Subject</strong>
+                            <p>@email.Body</p>
+                            <p class="detail-copy">Do: @string.Join(", ", email.Recipients)</p>
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+    </section>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private BlazorOtaEditorState? _state;
+    private bool _loading = true;
+    private string? _error;
+    private string? _statusMessage;
+    private string _statusTone = "info";
+    private bool _canManage;
+    private PackageFormModel _packageForm = PackageFormModel.CreateEmpty();
+    private CampaignFormModel _campaignForm = CampaignFormModel.CreateEmpty();
+
+    protected override async Task OnInitializedAsync() =>
+        await LoadAsync();
+
+    private async Task RefreshAsync() =>
+        await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var principal = (await AuthenticationStateTask).User;
+            _canManage = principal.HasPermission(PathoNetPermissions.OtaManage);
+            _state = await PortalService.GetOtaEditorStateAsync(CancellationToken.None);
+            if (string.IsNullOrWhiteSpace(_campaignForm.PackageId) && _state.OtaState.Packages.Length > 0)
+            {
+                _campaignForm.PackageId = _state.OtaState.Packages[0].Id;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Nie udalo sie zaladowac OTA: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void EditPackage(PortalOtaPackageRecord package) =>
+        _packageForm = PackageFormModel.FromPackage(package);
+
+    private void ResetPackageForm() =>
+        _packageForm = PackageFormModel.CreateEmpty();
+
+    private async Task SavePackageAsync()
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.SavePackageAsync(
+            new BlazorOtaPackageInputRecord(
+                _packageForm.PackageId,
+                _packageForm.Name,
+                _packageForm.Version,
+                _packageForm.Target,
+                _packageForm.FileName,
+                _packageForm.SizeMb,
+                _packageForm.Description,
+                _packageForm.ReleaseNotes,
+                _packageForm.Mandatory),
+            CancellationToken.None);
+
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            ResetPackageForm();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeletePackageAsync(string packageId)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.DeletePackageAsync(packageId, CancellationToken.None);
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (string.Equals(_packageForm.PackageId, packageId, StringComparison.OrdinalIgnoreCase))
+            {
+                ResetPackageForm();
+            }
+
+            await LoadAsync();
+        }
+    }
+
+    private void EditCampaign(PortalOtaCampaignViewRecord campaign) =>
+        _campaignForm = CampaignFormModel.FromCampaign(campaign);
+
+    private void ResetCampaignForm()
+    {
+        var packageId = _state?.OtaState.Packages.FirstOrDefault()?.Id ?? string.Empty;
+        _campaignForm = CampaignFormModel.CreateEmpty(packageId);
+    }
+
+    private async Task SaveCampaignAsync()
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.SaveCampaignAsync(
+            new BlazorOtaCampaignInputRecord(
+                _campaignForm.CampaignId,
+                _campaignForm.Title,
+                _campaignForm.PackageId,
+                _campaignForm.ScheduledLocal,
+                _campaignForm.Transport,
+                _campaignForm.Window,
+                _campaignForm.RetryLimit,
+                _campaignForm.NotifyServiceByEmail,
+                _campaignForm.Notes,
+                _campaignForm.TargetDeviceCodes.ToArray(),
+                _campaignForm.RecipientIds.ToArray()),
+            CancellationToken.None);
+
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            ResetCampaignForm();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteCampaignAsync(string campaignId)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.DeleteCampaignAsync(campaignId, CancellationToken.None);
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (string.Equals(_campaignForm.CampaignId, campaignId, StringComparison.OrdinalIgnoreCase))
+            {
+                ResetCampaignForm();
+            }
+
+            await LoadAsync();
+        }
+    }
+
+    private static string MapCampaignTone(string value) =>
+        value switch
+        {
+            "completed" => "online",
+            "partial" => "attention",
+            "failed" => "critical",
+            _ => "info"
+        };
+
+    private static string MapLogTone(string value) =>
+        value switch
+        {
+            "alarm" or "error" => "critical",
+            "warn" => "attention",
+            _ => "info"
+        };
+
+    private bool EnsureCanManage()
+    {
+        if (_canManage)
+        {
+            return true;
+        }
+
+        _statusMessage = $"Brak uprawnienia {PathoNetPermissions.OtaManage}.";
+        _statusTone = "critical";
+        return false;
+    }
+}

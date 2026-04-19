@@ -1,0 +1,24 @@
+[Unit]
+Description=PathoNet Mock API
+After=network-online.target
+Wants=network-online.target
+PartOf=pathonet.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+Environment=PATHONET_ROOT=/opt/pathonet/current
+Environment=PATHONET_HTTP_URLS=http://0.0.0.0:5000;http://0.0.0.0:5080
+Environment=ASPNETCORE_ENVIRONMENT=Production
+EnvironmentFile=-/etc/pathonet/pathonet.env
+WorkingDirectory=${PATHONET_ROOT}/api
+ExecStart=/usr/bin/dotnet ${PATHONET_ROOT}/api/PathoNet.Api.dll
+Restart=always
+RestartSec=5
+WatchdogSec=30
+KillSignal=SIGTERM
+TimeoutStopSec=20
+SyslogIdentifier=pathonet-api
+
+[Install]
+WantedBy=pathonet.target

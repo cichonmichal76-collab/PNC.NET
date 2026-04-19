@@ -1,0 +1,63 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Nazwa roli</span>
+            <input @bind="Model.Name" type="text" placeholder="np. Instalator" />
+        </label>
+        <label class="field">
+            <span>Opis</span>
+            <textarea @bind="Model.Description" rows="2" placeholder="Zakres odpowiedzialnosci roli"></textarea>
+        </label>
+    </div>
+    <div class="field">
+        <span>Uprawnienia roli</span>
+        <div class="selection-grid">
+            @foreach (var permission in Permissions)
+            {
+                var isChecked = Model.PermissionIds.Contains(permission.Id, StringComparer.OrdinalIgnoreCase);
+                <label class="selection-item">
+                    <input type="checkbox" checked="@isChecked" @onchange="args => TogglePermission(permission.Id, args.Value)" />
+                    <span>
+                        <strong>@permission.Name</strong>
+                        <small>@permission.Code / @permission.Category</small>
+                    </span>
+                </label>
+            }
+        </div>
+    </div>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz role</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowa rola</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AccessRoleFormModel Model { get; set; } = default!;
+    [Parameter] public IReadOnlyList<PortalIdentityPermissionRecord> Permissions { get; set; } = Array.Empty<PortalIdentityPermissionRecord>();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private void TogglePermission(string permissionId, object? value)
+    {
+        if (AsBool(value))
+        {
+            if (!Model.PermissionIds.Contains(permissionId, StringComparer.OrdinalIgnoreCase))
+            {
+                Model.PermissionIds.Add(permissionId);
+            }
+        }
+        else
+        {
+            Model.PermissionIds.RemoveAll(id => string.Equals(id, permissionId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+
+    private static bool AsBool(object? value) =>
+        value is bool boolValue
+            ? boolValue
+            : string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+}

@@ -1,0 +1,22 @@
+[Unit]
+Description=PathoNet Mock Collector
+After=pathonet-hub.service network-online.target
+Wants=pathonet-hub.service network-online.target
+PartOf=pathonet.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+Environment=PATHONET_ROOT=/opt/pathonet/current
+EnvironmentFile=-/etc/pathonet/pathonet.env
+WorkingDirectory=${PATHONET_ROOT}/collector
+ExecStart=/usr/bin/dotnet ${PATHONET_ROOT}/collector/PathoNet.Collector.dll
+Restart=always
+RestartSec=5
+WatchdogSec=30
+KillSignal=SIGTERM
+TimeoutStopSec=20
+SyslogIdentifier=pathonet-collector
+
+[Install]
+WantedBy=pathonet.target

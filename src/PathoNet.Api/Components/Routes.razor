@@ -1,0 +1,19 @@
+<CascadingAuthenticationState>
+    <Router AppAssembly="typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <NotAuthorized>
+                    <section class="panel-card">
+                        <StatusBadge Tone="critical">Brak dostepu</StatusBadge>
+                        <p>Ten ekran wymaga zalogowania i odpowiednich uprawnien.</p>
+                        <div class="form-actions">
+                            <a class="action-button secondary" href="/blazor/login">Przejdz do logowania</a>
+                            <a class="action-button secondary" href="/blazor">Powrot do Startu</a>
+                        </div>
+                    </section>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>

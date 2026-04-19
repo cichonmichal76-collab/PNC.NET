@@ -1,0 +1,54 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Nazwa</span>
+            <input @bind="Model.Name" type="text" placeholder="np. PNC Core" />
+        </label>
+        <label class="field">
+            <span>Wersja</span>
+            <input @bind="Model.Version" type="text" placeholder="np. 2.5.1" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Target</span>
+            <input @bind="Model.Target" type="text" />
+        </label>
+        <label class="field">
+            <span>Plik</span>
+            <input @bind="Model.FileName" type="text" placeholder="np. pnc-core-2.5.1.bin" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>Rozmiar MB</span>
+            <input @bind="Model.SizeMb" type="number" min="1" step="0.1" />
+        </label>
+        <label class="check-chip">
+            <input @bind="Model.Mandatory" type="checkbox" />
+            <span>Aktualizacja wymagana</span>
+        </label>
+    </div>
+    <label class="field">
+        <span>Opis</span>
+        <textarea @bind="Model.Description" rows="2" placeholder="Cel paczki OTA"></textarea>
+    </label>
+    <label class="field">
+        <span>Release notes</span>
+        <textarea @bind="Model.ReleaseNotes" rows="3" placeholder="Opis zmian wdrozeniowych"></textarea>
+    </label>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz pakiet</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowy pakiet</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PackageFormModel Model { get; set; } = default!;
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+}

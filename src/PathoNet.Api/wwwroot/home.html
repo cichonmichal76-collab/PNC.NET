@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PathoNet Host</title>
+    <link rel="stylesheet" href="/site.css">
+    <link rel="stylesheet" href="/blazor-shell.css">
+</head>
+<body data-page="host">
+    <div class="site-shell blazor-shell">
+        <div class="blazor-app-shell">
+            <aside class="blazor-sidebar">
+                <div class="sidebar-brand">
+                    <p class="eyebrow">PathoNet Host</p>
+                    <h1>Portal hosta</h1>
+                    <p class="lead-copy">Zdalny pulpit operatorski dla analizy, serwisu, IT i pracy nad flota PNC.</p>
+                </div>
+
+                <div class="sidebar-summary">
+                    <span class="pill soft">Host :5080</span>
+                    <span class="pill soft">OTA</span>
+                    <span class="pill soft">Analiza</span>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <section class="nav-section">
+                        <p class="nav-caption">Centrum</p>
+                        <a class="nav-link is-current" href="/">Portal hosta</a>
+                        <a class="nav-link" href="/blazor">Start</a>
+                        <a class="nav-link" href="/blazor/administracja">Administracja</a>
+                    </section>
+
+                    <section class="nav-section">
+                        <p class="nav-caption">Widoki hosta</p>
+                        <a class="nav-link" href="/blazor/urzadzenia">Urzadzenia</a>
+                        <a class="nav-link" href="/blazor/analiza">Analiza</a>
+                        <a class="nav-link" href="/blazor/access">Panel uprawnien i dostepu</a>
+                    </section>
+
+                    <section class="nav-section">
+                        <p class="nav-caption">Przejscia</p>
+                        <a class="nav-link" href="/local" data-target-port="5000" data-target-path="/blazor">Lokalny PNC</a>
+                        <a class="nav-link" href="/hdmi" data-target-port="5000" data-target-path="/hdmi" target="_blank" rel="noreferrer">HDMI lokalne</a>
+                        <a class="nav-link" href="/api/info" target="_blank" rel="noreferrer">API info</a>
+                    </section>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <strong>Ten port jest dedykowany dla hosta</strong>
+                    <p>Tu pracujesz z analiza, serwisem i zdalnym nadzorem, bez mieszania z lokalnym pulpitem PNC.</p>
+                </div>
+            </aside>
+
+            <div class="blazor-main">
+                <header class="blazor-pagebar">
+                    <div>
+                        <p class="eyebrow">Host :5080</p>
+                        <h2>Portal hosta i pracy zdalnej</h2>
+                        <p class="lead-copy">Rozdzielony pulpit operatorski z osobnym wejsciem do lokalnej maszyny PNC na porcie 5000.</p>
+                    </div>
+                    <div class="pagebar-actions">
+                        <a class="route-link" href="/local" data-target-port="5000" data-target-path="/blazor">Lokalny PNC</a>
+                        <a class="route-link" href="/hdmi" data-target-port="5000" data-target-path="/hdmi" target="_blank" rel="noreferrer">HDMI</a>
+                    </div>
+                </header>
+
+                <main class="blazor-content">
+                    <section class="hero-band">
+                        <article class="hero-card">
+                            <p class="eyebrow">Host</p>
+                            <h2 id="host-title">Ladowanie stanu portalu hosta</h2>
+                            <p id="host-copy" class="hero-copy">Pobieram overview, OTA i biezace alerty z rozdzielonego panelu hostowego.</p>
+                            <div class="hero-inline">
+                                <span class="pill" id="host-status-pill">Ladowanie</span>
+                                <span class="pill soft" id="host-version">-</span>
+                                <span class="pill soft" id="host-last-event">-</span>
+                            </div>
+                        </article>
+                        <article class="hero-card accent">
+                            <p class="eyebrow">Szybki Start Hosta</p>
+                            <div id="host-summary" class="mini-metric-grid"></div>
+                        </article>
+                    </section>
+
+                    <section class="route-grid" id="host-route-grid"></section>
+
+                    <section class="content-grid two-up">
+                        <article class="panel-card">
+                            <div class="panel-head">
+                                <p class="eyebrow">Najwazniejsze alerty</p>
+                                <h3>Priorytety hosta</h3>
+                            </div>
+                            <div id="host-alerts" class="stack-list"></div>
+                        </article>
+
+                        <article class="panel-card">
+                            <div class="panel-head">
+                                <p class="eyebrow">Host -> PNC</p>
+                                <h3>Harmonogram aktualizacji OTA</h3>
+                            </div>
+                            <div id="host-ota" class="stack-list"></div>
+                        </article>
+                    </section>
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <script src="/pages.js"></script>
+</body>
+</html>

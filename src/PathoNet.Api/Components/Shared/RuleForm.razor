@@ -1,0 +1,104 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Nazwa biznesowa</span>
+            <input @bind="Model.Name" type="text" placeholder="np. Awaryjne zatrzymanie silnika" />
+        </label>
+        <label class="field">
+            <span>Typ komunikatu</span>
+            <select @bind="Model.MessageType">
+                <option value="any">Dowolny</option>
+                <option value="info">Informacja</option>
+                <option value="warn">Ostrzezenie</option>
+                <option value="alarm">Alarm</option>
+                <option value="error">Blad</option>
+            </select>
+        </label>
+    </div>
+    <label class="field">
+        <span>Wzorzec surowego komunikatu</span>
+        <input @bind="Model.MatchText" type="text" placeholder="np. Device_4|ALARM SENSOR_TIMEOUT" />
+    </label>
+    <div class="field-row">
+        <label class="field">
+            <span>Prog godzinowy</span>
+            <input @bind="Model.ThresholdHours" type="number" min="0" max="720" step="0.25" />
+        </label>
+        <label class="field">
+            <span>Opis</span>
+            <textarea @bind="Model.Description" rows="2" placeholder="Znaczenie biznesowe komunikatu"></textarea>
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="check-chip">
+            <input @bind="Model.SendSms" type="checkbox" />
+            <span>Wyslij SMS po przekroczeniu progu</span>
+        </label>
+        <label class="check-chip">
+            <input @bind="Model.SendEmail" type="checkbox" />
+            <span>Wyslij e-mail do odbiorcow</span>
+        </label>
+    </div>
+    <label class="check-chip">
+        <input @bind="Model.Enabled" type="checkbox" />
+        <span>Regula aktywna w silniku mapowania</span>
+    </label>
+    <div class="field">
+        <span>Odbiorcy powiadomien</span>
+        @if (!Users.Any())
+        {
+            <p class="empty-state">Dodaj najpierw uzytkownika systemu.</p>
+        }
+        else
+        {
+            <div class="selection-grid">
+                @foreach (var user in Users)
+                {
+                    var isChecked = Model.RecipientIds.Contains(user.Id, StringComparer.OrdinalIgnoreCase);
+                    <label class="selection-item">
+                        <input type="checkbox" checked="@isChecked" @onchange="args => ToggleRecipient(user.Id, args.Value)" />
+                        <span>
+                            <strong>@user.DisplayName</strong>
+                            <small>@user.Role / @user.Email / @user.Phone</small>
+                        </span>
+                    </label>
+                }
+            </div>
+        }
+    </div>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz regule</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowa regula</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RuleFormModel Model { get; set; } = default!;
+    [Parameter] public IReadOnlyList<PortalUserRecord> Users { get; set; } = Array.Empty<PortalUserRecord>();
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private void ToggleRecipient(string recipientId, object? value)
+    {
+        if (AsBool(value))
+        {
+            if (!Model.RecipientIds.Contains(recipientId, StringComparer.OrdinalIgnoreCase))
+            {
+                Model.RecipientIds.Add(recipientId);
+            }
+        }
+        else
+        {
+            Model.RecipientIds.RemoveAll(id => string.Equals(id, recipientId, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+
+    private static bool AsBool(object? value) =>
+        value is bool boolValue
+            ? boolValue
+            : string.Equals(value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+}

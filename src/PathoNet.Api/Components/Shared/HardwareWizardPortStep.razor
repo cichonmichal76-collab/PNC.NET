@@ -1,0 +1,73 @@
+@using PathoNet.Api.Components.Pages
+
+<article class="panel-card">
+    <SectionHeader Eyebrow="Krok 3" Title="Mapa gniazd PNC" />
+    <p class="detail-copy">Kliknij bezposrednio na gniazdo z tylu urzadzenia. To tutaj technik wskazuje port lub magistrale, ktore maja zostac skonfigurowane.</p>
+
+    @if (!string.IsNullOrWhiteSpace(SuggestedPortId))
+    {
+        <p class="detail-copy">Collector podswietla sugerowane gniazdo jako pierwszy wybor. Nadal mozesz wskazac inne gniazdo recznie.</p>
+    }
+
+    <section class="hardware-visual-panel">
+        <div class="hardware-visual-panel-head">
+            <div>
+                <strong>Mapa gniazd PNC</strong>
+                <p class="detail-copy">Kolory pokazuja, ktore gniazda sa widoczne dla collectora i gdzie pojawia sie aktywnosc polaczenia.</p>
+            </div>
+            <div class="hardware-visual-legend">
+                <span class="chip info">szary = brak</span>
+                <span class="chip attention">zolty = stabilizacja</span>
+                <span class="chip online">zielony = link</span>
+                <span class="chip info">strzalki = TX / RX</span>
+            </div>
+        </div>
+
+        <div class="hardware-backplane">
+            <img src="/images/hardware-rear-panel.png"
+                 alt="Tylny panel PNC z gniazdami ETH, RS485, CAN, WE DRY i RS232." />
+            @foreach (var port in LayoutPorts)
+            {
+                var layout = HardwareIntegrationWizardSupport.GetPortLayout(port.PortId);
+                if (layout is not null)
+                {
+                    <HardwarePortVisual Port="port"
+                                        Layout="layout"
+                                        SelectedPortId="SelectedPortId"
+                                        SuggestedPortId="SuggestedPortId"
+                                        OnSelect="OnSelectPort" />
+                }
+            }
+        </div>
+
+        <div class="hardware-visual-selected">
+            @if (SelectedPort is null)
+            {
+                <p class="detail-copy">Nie wybrano jeszcze portu. Kliknij gniazdo na grafice, aby przejsc dalej.</p>
+            }
+            else
+            {
+                <div class="pill-row">
+                    <StatusBadge Tone="@HardwareIntegrationWizardSupport.MapTone(SelectedPort.Status)">@SelectedPort.Status</StatusBadge>
+                    <StatusBadge Kind="chip" Tone="info">@SelectedPort.PortId</StatusBadge>
+                    <StatusBadge Kind="chip" Tone="info">@HardwareIntegrationWizardSupport.GetVisualStateLabel(SelectedPort)</StatusBadge>
+                </div>
+                <p class="detail-copy"><strong>@SelectedPort.Alias</strong> - @SelectedPort.Summary</p>
+            }
+        </div>
+    </section>
+</article>
+
+@code {
+    [Parameter, EditorRequired] public HardwarePortStatusRecord[] ConnectedPorts { get; set; } = [];
+    [Parameter, EditorRequired] public HardwarePortStatusRecord[] OtherPorts { get; set; } = [];
+    [Parameter] public string? SuggestedPortId { get; set; }
+    [Parameter] public string? SelectedPortId { get; set; }
+    [Parameter] public EventCallback<string> OnSelectPort { get; set; }
+
+    private IReadOnlyList<HardwarePortStatusRecord> LayoutPorts =>
+        HardwareIntegrationWizardSupport.GetLayoutPorts(ConnectedPorts, OtherPorts);
+
+    private HardwarePortStatusRecord? SelectedPort =>
+        LayoutPorts.FirstOrDefault(port => string.Equals(port.PortId, SelectedPortId, StringComparison.OrdinalIgnoreCase));
+}

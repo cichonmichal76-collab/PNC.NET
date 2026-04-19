@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="site.css" />
+    <link rel="stylesheet" href="blazor-shell.css" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <script>
+        window.pathonetTheme = {
+            apply(theme) {
+                const nextTheme = theme === "dark" ? "dark" : "light";
+                document.documentElement.setAttribute("data-theme", nextTheme);
+                localStorage.setItem("pathonet-theme", nextTheme);
+                return nextTheme;
+            },
+            getCurrent() {
+                const storedTheme = localStorage.getItem("pathonet-theme");
+                const nextTheme = storedTheme === "dark" ? "dark" : "light";
+                document.documentElement.setAttribute("data-theme", nextTheme);
+                return nextTheme;
+            },
+            toggle() {
+                const currentTheme = this.getCurrent();
+                return this.apply(currentTheme === "dark" ? "light" : "dark");
+            }
+        };
+
+        window.pathonetTheme.getCurrent();
+    </script>
+    <script src="_framework/blazor.web.js"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<nav class="sidebar-nav">
+    <section class="nav-section">
+        <p class="nav-caption">Operacje</p>
+        <AuthorizeView Policy="@PathoNetPolicyNames.Authenticated">
+            <Authorized>
+                <NavLink class="nav-link" ActiveClass="is-current" href="/blazor" Match="NavLinkMatch.All">
+                    <span class="nav-link-copy">
+                        <span class="nav-link-title">Start</span>
+                        <small>Najwazniejsze informacje, zadania i szybkie wejscia</small>
+                    </span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Policy="@PathoNetPermissions.PncView">
+            <Authorized>
+                <NavLink class="nav-link" ActiveClass="is-current" href="/blazor/urzadzenia">
+                    <span class="nav-link-copy">
+                        <span class="nav-link-title">Urzadzenia</span>
+                        <small>Lista PNC, statusy, lacznosc i szczegoly techniczne</small>
+                    </span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Policy="@PathoNetPermissions.AnalysisView">
+            <Authorized>
+                <NavLink class="nav-link" ActiveClass="is-current" href="/blazor/analiza">
+                    <span class="nav-link-copy">
+                        <span class="nav-link-title">Analiza</span>
+                        <small>Trendy, ryzyko i dane pod predykcje</small>
+                    </span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+    </section>
+
+    <section class="nav-section">
+        <p class="nav-caption">Dzialania</p>
+        <AuthorizeView Policy="@PathoNetPermissions.RulesView">
+            <Authorized>
+                <NavLink class="nav-link" ActiveClass="is-current" href="/blazor/serwis">
+                    <span class="nav-link-copy">
+                        <span class="nav-link-title">Serwis</span>
+                        <small>Diagnostyka, zdarzenia, reguly i kreator podlaczenia</small>
+                    </span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+        <AuthorizeView Policy="@PathoNetPermissions.OtaView">
+            <Authorized>
+                <NavLink class="nav-link" ActiveClass="is-current" href="/blazor/administracja">
+                    <span class="nav-link-copy">
+                        <span class="nav-link-title">Administracja</span>
+                        <small>OTA, API, dostepy i ustawienia techniczne</small>
+                    </span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
+    </section>
+</nav>

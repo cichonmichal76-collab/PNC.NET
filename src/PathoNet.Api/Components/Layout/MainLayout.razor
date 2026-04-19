@@ -1,0 +1,104 @@
+@inherits LayoutComponentBase
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+
+<div class="site-shell blazor-shell">
+    <div class="blazor-app-shell">
+        <aside class="blazor-sidebar">
+            <NavMenu />
+        </aside>
+
+            <div class="blazor-main">
+                <header class="blazor-pagebar">
+                    <div class="app-topbar">
+                        <div class="app-topbar-copy">
+                            <strong>PathoNetController</strong>
+                        </div>
+                        <div class="app-topbar-actions">
+                            <button class="theme-toggle"
+                                    type="button"
+                                    title="@(_isDarkTheme ? "Tryb ciemny" : "Tryb jasny")"
+                                    aria-label="@(_isDarkTheme ? "Tryb ciemny" : "Tryb jasny")"
+                                    @onclick="ToggleThemeAsync">
+                                @if (_isDarkTheme)
+                                {
+                                    <svg class="theme-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="4.5"></circle>
+                                        <path d="M12 1.75v2.5M12 19.75v2.5M4.75 12h-2.5M21.75 12h-2.5M4.93 4.93 3.16 3.16M20.84 20.84l-1.77-1.77M4.93 19.07l-1.77 1.77M20.84 3.16l-1.77 1.77"></path>
+                                    </svg>
+                                }
+                                else
+                                {
+                                    <svg class="theme-toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path d="M20.25 14.55A8.75 8.75 0 0 1 9.45 3.75a8.77 8.77 0 1 0 10.8 10.8Z"></path>
+                                    </svg>
+                                }
+                                <span class="sr-only">@(_isDarkTheme ? "Tryb ciemny" : "Tryb jasny")</span>
+                            </button>
+                            <AuthorizeView>
+                                <Authorized Context="auth">
+                                    <div class="topbar-user-inline">
+                                        <div class="topbar-user-meta plain">
+                                            <strong>Witaj @(auth.User.FindFirst(PathoNetClaimTypes.DisplayName)?.Value ?? auth.User.Identity?.Name ?? "Uzytkownik")</strong>
+                                        </div>
+                                        <a class="route-link topbar-user-logout" href="/identity/logout?returnUrl=/blazor/login">Wyloguj</a>
+                                    </div>
+                                </Authorized>
+                                <NotAuthorized>
+                                    <div class="topbar-user-card compact">
+                                        <div class="topbar-user-meta">
+                                            <strong>Sesja niezalogowana</strong>
+                                            <span>Zaloguj sie do panelu</span>
+                                        </div>
+                                        <a class="route-link topbar-user-logout" href="/blazor/login">Logowanie</a>
+                                    </div>
+                                </NotAuthorized>
+                            </AuthorizeView>
+                        </div>
+                    </div>
+                </header>
+
+            <main class="blazor-content">
+                @Body
+            </main>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool _themeInitialized;
+    private bool _isDarkTheme;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _themeInitialized)
+        {
+            return;
+        }
+
+        try
+        {
+            var currentTheme = await JS.InvokeAsync<string>("pathonetTheme.getCurrent");
+            _isDarkTheme = string.Equals(currentTheme, "dark", StringComparison.OrdinalIgnoreCase);
+            _themeInitialized = true;
+            StateHasChanged();
+        }
+        catch
+        {
+            _themeInitialized = true;
+        }
+    }
+
+    private async Task ToggleThemeAsync()
+    {
+        try
+        {
+            var currentTheme = await JS.InvokeAsync<string>("pathonetTheme.toggle");
+            _isDarkTheme = string.Equals(currentTheme, "dark", StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            _isDarkTheme = !_isDarkTheme;
+        }
+    }
+}

@@ -1,0 +1,36 @@
+<div class="editor-form">
+    <div class="field-row">
+        <label class="field">
+            <span>Nazwa</span>
+            <input @bind="Model.DisplayName" type="text" placeholder="np. Marek Serwis" />
+        </label>
+        <label class="field">
+            <span>Rola</span>
+            <input @bind="Model.Role" type="text" />
+        </label>
+    </div>
+    <div class="field-row">
+        <label class="field">
+            <span>E-mail</span>
+            <input @bind="Model.Email" type="email" placeholder="np. serwis@pathonet.local" />
+        </label>
+        <label class="field">
+            <span>Telefon</span>
+            <input @bind="Model.Phone" type="text" placeholder="+48 600 100 200" />
+        </label>
+    </div>
+    <div class="form-actions">
+        <button class="action-button primary" type="button" @onclick="HandleSaveAsync">Zapisz uzytkownika</button>
+        <button class="action-button secondary" type="button" @onclick="HandleResetAsync">Nowy uzytkownik</button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public UserFormModel Model { get; set; } = default!;
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnReset { get; set; }
+
+    private Task HandleSaveAsync() => OnSave.InvokeAsync();
+
+    private Task HandleResetAsync() => OnReset.InvokeAsync();
+}

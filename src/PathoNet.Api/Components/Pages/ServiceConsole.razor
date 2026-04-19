@@ -1,0 +1,43 @@
+@page "/blazor/serwis"
+@attribute [Authorize(Policy = PathoNetPermissions.RulesView)]
+
+<section class="panel-card">
+    <SectionHeader Eyebrow="Serwis" Title="Szybkie przejscia" />
+
+    <div class="route-grid">
+        <article class="route-card">
+            <span class="chip info">kreator</span>
+            <h3>Kreator podlaczenia</h3>
+            <p>Uruchomienie PNC, self-check, konfiguracja portow i kreator podlaczenia urzadzen.</p>
+            <a class="route-link" href="/blazor/serwis/hardware">Otworz kreator</a>
+        </article>
+
+        <article class="route-card">
+            <span class="chip info">reguly</span>
+            <h3>Edytor regul</h3>
+            <p>Mapowanie komunikatow, progi eskalacji i odbiorcy dla scenariuszy serwisowych.</p>
+            <a class="route-link" href="/blazor/rules">Otworz reguly</a>
+        </article>
+
+        <article class="route-card">
+            <span class="chip info">zdrowie</span>
+            <h3>Zdrowie uslug</h3>
+            <p>PID-y, watchdog, historia restartow i kontrola runtime dla uslug edge.</p>
+            <a class="route-link" href="/blazor/health">Otworz zdrowie</a>
+        </article>
+
+        <article class="route-card">
+            <span class="chip info">lokalny</span>
+            <h3>Lokalny PNC</h3>
+            <p>Awaryjny panel lokalny urzadzenia do pracy onsite i diagnostyki bez hosta.</p>
+            <a class="route-link" href="/local">Otworz lokalny PNC</a>
+        </article>
+
+        <article class="route-card">
+            <span class="chip info">diagnostyka</span>
+            <h3>Diagnostyka sygnalow</h3>
+            <p>Surowe notify, heartbeat, LTE i warstwa przejsciowa do analizy sygnalow oraz integracji.</p>
+            <a class="route-link" href="/blazor/diagnostyka">Otworz diagnostyke</a>
+        </article>
+    </div>
+</section>

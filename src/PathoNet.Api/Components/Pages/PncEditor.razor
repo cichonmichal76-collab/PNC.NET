@@ -1,0 +1,475 @@
+@page "/blazor/pnc"
+@attribute [Authorize(Policy = PathoNetPermissions.PncView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie floty PNC...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_fleetState is not null)
+{
+    var devices = _fleetState.PncDevices;
+    var selected = SelectedPnc;
+    var totalConnections = devices.Sum(device => device.Connections.Length);
+    var onlineDevices = devices.Count(device => device.Online);
+    var avgSignal = devices.Length == 0 ? 0 : (int)Math.Round(devices.Average(device => device.BaseSignalPercent));
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <section class="panel-card">
+            <div class="pill-row">
+                <StatusBadge Tone="@_statusTone">PNC</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">Blazor Web App</StatusBadge>
+            </div>
+            <p>@_statusMessage</p>
+        </section>
+    }
+
+    <div class="form-actions">
+        <button class="action-button secondary" type="button" @onclick="RefreshAsync">Odswiez</button>
+        <a class="action-button secondary" href="/api/portal/fleet" target="_blank" rel="noreferrer">API fleet</a>
+    </div>
+
+    <MetricGrid>
+        <MetricTile Label="PNC" Value="@devices.Length.ToString()" Caption="Skonfigurowane wezly nadrzedne" />
+        <MetricTile Label="Online" Value="@onlineDevices.ToString()" Caption="Wezly gotowe do pracy" />
+        <MetricTile Label="Porty" Value="@totalConnections.ToString()" Caption="Wszystkie mapowania zewnetrzne" />
+        <MetricTile Label="Sredni sygnal" Value="@($"{avgSignal}%")" Caption="Jakosc lacznosci radiowej floty" />
+        <MetricTile Label="RS-232" Value="@devices.Sum(device => device.Rs232Connected).ToString()" Caption="Urzadzenia na serialu" />
+        <MetricTile Label="RS-485" Value="@devices.Sum(device => device.Rs485Connected).ToString()" Caption="Urzadzenia na magistrali RS-485" />
+    </MetricGrid>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Flota PNC" Title="Lista wezlow nadrzednych" />
+            <div class="stack-list">
+                @if (!devices.Any())
+                {
+                    <p class="empty-state">Brak wezlow PNC. Dodaj pierwszy formularzem po prawej stronie.</p>
+                }
+                else
+                {
+                    @foreach (var device in devices)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@(device.Online ? "online" : "critical")">@(device.Online ? "online" : "offline")</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="@(selected?.DeviceCode == device.DeviceCode ? "attention" : "info")">@device.DeviceCode</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">soft @device.Firmware</StatusBadge>
+                            </div>
+                            <strong>@device.Name</strong>
+                            <p>@device.Location</p>
+                            <p class="detail-copy">
+                                sygnal @device.BaseSignalPercent% (@device.BaseSignalDbm dBm) /
+                                operator @device.OperatorName / porty @device.Connections.Length
+                            </p>
+                            <div class="form-actions">
+                                <button class="action-button secondary" type="button" @onclick="() => SelectPnc(device.DeviceCode)">Wybierz</button>
+                                @if (_canManage)
+                                {
+                                    <button class="action-button secondary" type="button" @onclick="() => EditPnc(device)">Edytuj</button>
+                                    <button class="action-button danger" type="button" @onclick="() => DeletePncAsync(device.DeviceCode)">Usun</button>
+                                }
+                            </div>
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Formularz PNC" Title="@(_pncForm.OriginalDeviceCode is null ? "Dodaj nowy wezel" : $"Edycja: {_pncForm.DeviceCode}")" />
+            @if (_canManage)
+            {
+                <PncNodeForm Model="_pncForm" OnSave="SavePncAsync" OnReset="ResetPncForm" />
+            }
+            else
+            {
+                <p class="empty-state">Masz tylko podglad. Konfiguracja PNC wymaga uprawnienia <span class="mono">@PathoNetPermissions.PncManage</span>.</p>
+            }
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Porty zewnetrzne" Title="@(selected is null ? "Wybierz PNC" : $"Mapowania dla {selected.DeviceCode}")" />
+            <div class="stack-list">
+                @if (selected is null)
+                {
+                    <p class="empty-state">Najpierw wybierz wezel PNC z listy.</p>
+                }
+                else if (!selected.Connections.Any())
+                {
+                    <p class="empty-state">Brak skonfigurowanych portow dla @selected.DeviceCode.</p>
+                }
+                else
+                {
+                    @foreach (var connection in selected.Connections)
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@MapConnectionTone(connection.Status)">@connection.Status</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@connection.InterfaceType</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@connection.PortName</StatusBadge>
+                            </div>
+                            <strong>@connection.DeviceName</strong>
+                            <p>@connection.Protocol</p>
+                            <p class="detail-copy">@(connection.BaudRate.HasValue ? $"baud {connection.BaudRate.Value} / " : string.Empty)@connection.Notes</p>
+                            @if (_canManage)
+                            {
+                                <div class="form-actions">
+                                    <button class="action-button secondary" type="button" @onclick="() => EditConnection(connection)">Edytuj</button>
+                                    <button class="action-button danger" type="button" @onclick="() => DeleteConnectionAsync(connection.Id)">Usun</button>
+                                </div>
+                            }
+                        </article>
+                    }
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Edytor polaczenia" Title="@(_connectionForm.OriginalConnectionId is null ? "Dodaj urzadzenie do portu" : $"Edycja: {_connectionForm.PortName}")" />
+            @if (selected is null)
+            {
+                <p class="empty-state">Najpierw wybierz PNC, aby skonfigurowac porty zewnetrzne.</p>
+            }
+            else if (!_canManage)
+            {
+                <p class="empty-state">Masz tylko podglad. Edycja polaczen wymaga uprawnienia <span class="mono">@PathoNetPermissions.PncManage</span>.</p>
+            }
+            else
+            {
+                <PncConnectionEditor Model="_connectionForm" OnSave="SaveConnectionAsync" OnReset="ResetConnectionForm" />
+            }
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Monitor plyty" Title="@(selected is null ? "Brak wybranego wezla" : $"{selected.Name} / {selected.BoardRevision}")" />
+            @if (selected is null)
+            {
+                <p class="empty-state">Wybierz wezel PNC, aby zobaczyc stan plyty glownej.</p>
+            }
+            else
+            {
+                <div class="mini-metric-grid wide">
+                    <article class="metric-tile">
+                        <span>CPU</span>
+                        <strong>@selected.BaseCpuLoadPercent%</strong>
+                        <small>obciazenie procesora</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Pamiec</span>
+                        <strong>@selected.BaseMemoryPercent%</strong>
+                        <small>wykorzystanie RAM</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Dysk</span>
+                        <strong>@selected.BaseStoragePercent%</strong>
+                        <small>wykorzystanie storage</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Temperatura</span>
+                        <strong>@selected.MainboardTempC C</strong>
+                        <small>@selected.MainboardStatus</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Zasilanie</span>
+                        <strong>@selected.SupplyVoltage.ToString("0.0") V</strong>
+                        <small>watchdog @(selected.WatchdogHealthy ? "ok" : "blad")</small>
+                    </article>
+                    <article class="metric-tile">
+                        <span>Uptime</span>
+                        <strong>@selected.UptimeHours h</strong>
+                        <small>serial @selected.BoardSerialNumber</small>
+                    </article>
+                </div>
+            }
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Onboarding" Title="Podsumowanie konfiguracji" />
+            @if (selected is null)
+            {
+                <p class="empty-state">Brak wybranego PNC do podsumowania.</p>
+            }
+            else
+            {
+                <div class="stack-list">
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@(selected.Online ? "online" : "critical")">@(selected.Online ? "online" : "offline")</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@selected.OperatorName</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@selected.NetworkType</StatusBadge>
+                        </div>
+                        <strong>@selected.DeviceCode / @selected.Name</strong>
+                        <p>@selected.Notes</p>
+                        <p class="detail-copy">lokalizacja @selected.Location / SIM @selected.SimSlot / numer @selected.SimNumber</p>
+                    </article>
+                    <article class="stack-item">
+                        <strong>Porty i interfejsy</strong>
+                        <p>RS-232 @selected.Rs232Connected, RS-485 @selected.Rs485Connected, CAN @selected.CanConnected, Ethernet @selected.EthernetConnected, DI @selected.DigitalInputs, DO @selected.DigitalOutputs.</p>
+                        <p class="detail-copy">Firmware @selected.Firmware / sygnal @selected.BaseSignalPercent% / plyta @selected.BoardRevision.</p>
+                    </article>
+                </div>
+            }
+        </article>
+    </section>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private PortalFleetConfig? _fleetState;
+    private bool _loading = true;
+    private string? _error;
+    private string? _statusMessage;
+    private string _statusTone = "info";
+    private string? _selectedDeviceCode;
+    private bool _canManage;
+    private PncFormModel _pncForm = PncFormModel.CreateEmpty();
+    private ConnectionFormModel _connectionForm = ConnectionFormModel.CreateEmpty(string.Empty);
+
+    private PncDeviceConfigRecord? SelectedPnc =>
+        _fleetState?.PncDevices.FirstOrDefault(device => string.Equals(device.DeviceCode, _selectedDeviceCode, StringComparison.OrdinalIgnoreCase));
+
+    protected override async Task OnInitializedAsync() =>
+        await LoadAsync();
+
+    private Task RefreshAsync() =>
+        LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var principal = (await AuthenticationStateTask).User;
+            _canManage = principal.HasPermission(PathoNetPermissions.PncManage);
+            _fleetState = PortalService.GetFleetState();
+            if (_fleetState.PncDevices.Length > 0)
+            {
+                var selectedExists = _fleetState.PncDevices.Any(device => string.Equals(device.DeviceCode, _selectedDeviceCode, StringComparison.OrdinalIgnoreCase));
+                _selectedDeviceCode = selectedExists
+                    ? _selectedDeviceCode
+                    : _fleetState.PncDevices[0].DeviceCode;
+            }
+            else
+            {
+                _selectedDeviceCode = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Nie udalo sie zaladowac floty PNC: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SelectPnc(string deviceCode)
+    {
+        _selectedDeviceCode = deviceCode;
+        ResetConnectionForm();
+    }
+
+    private void EditPnc(PncDeviceConfigRecord device)
+    {
+        _selectedDeviceCode = device.DeviceCode;
+        _pncForm = PncFormModel.FromDevice(device);
+    }
+
+    private void ResetPncForm() =>
+        _pncForm = PncFormModel.CreateEmpty();
+
+    private async Task SavePncAsync()
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.SavePncAsync(
+            new BlazorPncInputRecord(
+                _pncForm.OriginalDeviceCode,
+                _pncForm.DeviceCode,
+                _pncForm.Name,
+                _pncForm.Location,
+                _pncForm.OperatorName,
+                _pncForm.NetworkType,
+                _pncForm.SimNumber,
+                _pncForm.SimSlot,
+                _pncForm.SignalPercent,
+                _pncForm.SignalDbm,
+                _pncForm.Firmware,
+                _pncForm.MainboardStatus,
+                _pncForm.MainboardTempC,
+                _pncForm.SupplyVoltage,
+                _pncForm.BoardRevision,
+                _pncForm.BoardSerialNumber,
+                _pncForm.CpuLoadPercent,
+                _pncForm.MemoryPercent,
+                _pncForm.StoragePercent,
+                _pncForm.UptimeHours,
+                _pncForm.Online,
+                _pncForm.WatchdogHealthy,
+                _pncForm.Notes),
+            CancellationToken.None);
+
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (!string.IsNullOrWhiteSpace(_pncForm.DeviceCode))
+            {
+                _selectedDeviceCode = _pncForm.DeviceCode.Trim().ToUpperInvariant();
+            }
+
+            ResetPncForm();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeletePncAsync(string deviceCode)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        var result = await PortalService.DeletePncAsync(deviceCode, CancellationToken.None);
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (string.Equals(_selectedDeviceCode, deviceCode, StringComparison.OrdinalIgnoreCase))
+            {
+                _selectedDeviceCode = null;
+            }
+
+            if (string.Equals(_pncForm.OriginalDeviceCode, deviceCode, StringComparison.OrdinalIgnoreCase))
+            {
+                ResetPncForm();
+            }
+
+            ResetConnectionForm();
+            await LoadAsync();
+        }
+    }
+
+    private void EditConnection(PncExternalConnectionConfigRecord connection)
+    {
+        if (SelectedPnc is null)
+        {
+            return;
+        }
+
+        _connectionForm = ConnectionFormModel.FromConnection(SelectedPnc.DeviceCode, connection);
+    }
+
+    private void ResetConnectionForm()
+    {
+        _connectionForm = ConnectionFormModel.CreateEmpty(SelectedPnc?.DeviceCode ?? string.Empty);
+    }
+
+    private async Task SaveConnectionAsync()
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        if (SelectedPnc is null)
+        {
+            _statusMessage = "Najpierw wybierz PNC.";
+            _statusTone = "critical";
+            return;
+        }
+
+        var result = await PortalService.SaveConnectionAsync(
+            new BlazorPncConnectionInputRecord(
+                SelectedPnc.DeviceCode,
+                _connectionForm.OriginalConnectionId,
+                _connectionForm.InterfaceType,
+                _connectionForm.PortName,
+                _connectionForm.DeviceName,
+                _connectionForm.Protocol,
+                _connectionForm.Status,
+                _connectionForm.Notes,
+                _connectionForm.BaudRate),
+            CancellationToken.None);
+
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            ResetConnectionForm();
+            await LoadAsync();
+        }
+    }
+
+    private async Task DeleteConnectionAsync(string connectionId)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        if (SelectedPnc is null)
+        {
+            return;
+        }
+
+        var result = await PortalService.DeleteConnectionAsync(SelectedPnc.DeviceCode, connectionId, CancellationToken.None);
+        _statusMessage = result.Message;
+        _statusTone = result.Success ? "online" : "critical";
+
+        if (result.Success)
+        {
+            if (string.Equals(_connectionForm.OriginalConnectionId, connectionId, StringComparison.OrdinalIgnoreCase))
+            {
+                ResetConnectionForm();
+            }
+
+            await LoadAsync();
+        }
+    }
+
+    private static string MapConnectionTone(string value) =>
+        value switch
+        {
+            "critical" => "critical",
+            "attention" => "attention",
+            _ => "online"
+        };
+
+    private bool EnsureCanManage()
+    {
+        if (_canManage)
+        {
+            return true;
+        }
+
+        _statusMessage = $"Brak uprawnienia {PathoNetPermissions.PncManage}.";
+        _statusTone = "critical";
+        return false;
+    }
+}

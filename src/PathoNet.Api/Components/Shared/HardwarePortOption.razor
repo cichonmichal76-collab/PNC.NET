@@ -1,0 +1,34 @@
+@using PathoNet.Api
+@using PathoNet.Api.Components.Pages
+
+<button class="wizard-port-option @(string.Equals(Port.PortId, SelectedPortId, StringComparison.OrdinalIgnoreCase) ? "is-selected" : string.Empty)"
+        type="button"
+        @onclick="HandleSelectAsync">
+    <div class="pill-row">
+        <StatusBadge Tone="@HardwareIntegrationWizardSupport.MapTone(Port.Status)">@Port.Status</StatusBadge>
+        <StatusBadge Kind="chip" Tone="info">@Port.PortId</StatusBadge>
+        <StatusBadge Kind="chip" Tone="@ConnectivityTone">@ConnectivityLabel</StatusBadge>
+        @if (string.Equals(Port.PortId, SuggestedPortId, StringComparison.OrdinalIgnoreCase))
+        {
+            <StatusBadge Kind="chip" Tone="info">sugerowany</StatusBadge>
+        }
+    </div>
+    <strong>@Port.Alias</strong>
+    <p>@Port.Purpose</p>
+    <p class="detail-copy">
+        wykrycie @(Port.Detected ? "tak" : "nie") / RX @HardwareIntegrationWizardSupport.DisplayNullableBool(Port.RxActive) / TX @HardwareIntegrationWizardSupport.DisplayNullableBool(Port.TxActive) / link @HardwareIntegrationWizardSupport.DisplayNullableBool(Port.LinkUp)
+    </p>
+    <p class="detail-copy">@SelectionHint</p>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public HardwarePortStatusRecord Port { get; set; } = default!;
+    [Parameter] public string? SelectedPortId { get; set; }
+    [Parameter] public string? SuggestedPortId { get; set; }
+    [Parameter] public string ConnectivityLabel { get; set; } = "reczny wybor";
+    [Parameter] public string ConnectivityTone { get; set; } = "attention";
+    [Parameter] public string SelectionHint { get; set; } = "Kliknij, aby wybrac ten port do wdrozenia.";
+    [Parameter] public EventCallback<string> OnSelect { get; set; }
+
+    private Task HandleSelectAsync() => OnSelect.InvokeAsync(Port.PortId);
+}

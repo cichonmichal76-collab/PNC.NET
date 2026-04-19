@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PathoNet HDMI</title>
+    <meta name="theme-color" content="#03060c">
+    <link rel="stylesheet" href="/hdmi.css">
+</head>
+<body class="hdmi-kiosk">
+    <div id="hdmi-connection-banner" class="connection-banner online">
+        <strong id="hdmi-connection-state">Polaczono z lokalnym API</strong>
+        <span id="hdmi-connection-meta">Auto-odswiezanie co 2 sekundy</span>
+    </div>
+
+    <div id="hdmi-overlay" class="offline-overlay hidden" aria-live="polite">
+        <div class="overlay-card">
+            <p class="eyebrow">PathoNet HDMI</p>
+            <h2>Trwa ponawianie polaczenia</h2>
+            <p id="hdmi-overlay-message" class="overlay-copy">Ekran czeka na odpowiedz lokalnego API i sam wznowi odswiezanie.</p>
+        </div>
+    </div>
+
+    <main class="wallboard-shell">
+        <header class="wallboard-header">
+            <div>
+                <p class="eyebrow">PathoNet HDMI</p>
+                <h1 id="hdmi-title">Lokalna sciana monitoringu</h1>
+                <p id="hdmi-headline" class="headline">Odczyt danych na zywo z lokalnego srodowiska mock.</p>
+            </div>
+            <div class="wallboard-stats">
+                <article>
+                    <span>Powiadomienia</span>
+                    <strong id="hdmi-notify">0</strong>
+                </article>
+                <article>
+                    <span>Heartbeaty</span>
+                    <strong id="hdmi-heartbeat">0</strong>
+                </article>
+                <article>
+                    <span>Ostatni heartbeat</span>
+                    <strong id="hdmi-last-heartbeat">-</strong>
+                </article>
+                <article>
+                    <span>Zegar lokalny</span>
+                    <strong id="hdmi-clock">--:--:--</strong>
+                </article>
+            </div>
+        </header>
+
+        <section class="wallboard-grid">
+            <article class="hdmi-panel">
+                <div class="panel-head">
+                    <p class="eyebrow">Pas Alertow</p>
+                    <h2>Co wymaga reakcji</h2>
+                </div>
+                <div id="hdmi-alerts" class="alert-strip"></div>
+            </article>
+
+            <article class="hdmi-panel">
+                <div class="panel-head">
+                    <p class="eyebrow">Sciana Urzadzen</p>
+                    <h2>Kafelki statusu urzadzen</h2>
+                </div>
+                <div id="hdmi-tiles" class="tile-grid"></div>
+            </article>
+        </section>
+
+        <footer class="wallboard-footer">
+            <div class="footer-block">
+                <span>Tryb kiosku</span>
+                <strong>Fullscreen / auto-reconnect</strong>
+            </div>
+            <div class="footer-block">
+                <span>Ostatnia aktualizacja</span>
+                <strong id="hdmi-last-refresh">jeszcze nie</strong>
+            </div>
+            <div class="footer-block">
+                <span>Nastepne pobranie</span>
+                <strong id="hdmi-next-refresh">2 s</strong>
+            </div>
+        </footer>
+    </main>
+
+    <script src="/hdmi.js"></script>
+</body>
+</html>

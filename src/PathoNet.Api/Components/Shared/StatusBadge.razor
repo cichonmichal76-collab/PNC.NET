@@ -1,0 +1,14 @@
+@if (Kind == "chip")
+{
+    <span class="chip @Tone">@ChildContent</span>
+}
+else
+{
+    <span class="pill @Tone">@ChildContent</span>
+}
+
+@code {
+    [Parameter] public string Tone { get; set; } = "info";
+    [Parameter] public string Kind { get; set; } = "pill";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

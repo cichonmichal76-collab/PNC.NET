@@ -1,0 +1,67 @@
+{
+  "users": [
+    {
+      "id": "admin-anna",
+      "displayName": "Anna Koordynator",
+      "role": "Administrator",
+      "email": "anna.koordynator@pathonet.local",
+      "phone": "\u002B48 600 100 101"
+    },
+    {
+      "id": "serwis-marek",
+      "displayName": "Marek Serwis",
+      "role": "Serwis",
+      "email": "marek.serwis@pathonet.local",
+      "phone": "\u002B48 600 100 202"
+    },
+    {
+      "id": "utrzymanie-ewa",
+      "displayName": "Ewa Utrzymanie",
+      "role": "Utrzymanie",
+      "email": "ewa.utrzymanie@pathonet.local",
+      "phone": "\u002B48 600 100 303"
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule-device-4-emergency-stop",
+      "name": "Awaryjne zatrzymanie silnika",
+      "matchText": "Device_4|ALARM SENSOR_TIMEOUT",
+      "description": "Regula specyficzna dla Device_4 z eskalacja na poziomie krytycznym.",
+      "thresholdHours": 5,
+      "sendSms": true,
+      "sendEmail": true,
+      "recipientIds": [
+        "admin-anna",
+        "serwis-marek"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "rule-generic-sensor-timeout",
+      "name": "Krytyczny timeout czujnika",
+      "matchText": "ALARM SENSOR_TIMEOUT",
+      "description": "Mapa biznesowa dla timeoutow czujnika na pozostalych urzadzeniach.",
+      "thresholdHours": 4,
+      "sendSms": false,
+      "sendEmail": true,
+      "recipientIds": [
+        "serwis-marek"
+      ],
+      "enabled": true
+    },
+    {
+      "id": "rule-buffer-high",
+      "name": "Bufor komunikacji blisko limitu",
+      "matchText": "WARN BUFFER HIGH",
+      "description": "Wczesne ostrzezenie przed opoznieniem lub utrata ramek.",
+      "thresholdHours": 2,
+      "sendSms": false,
+      "sendEmail": true,
+      "recipientIds": [
+        "utrzymanie-ewa"
+      ],
+      "enabled": true
+    }
+  ]
+}

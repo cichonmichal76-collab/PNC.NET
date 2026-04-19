@@ -1,0 +1,71 @@
+@using PathoNet.Api.Components.Pages
+
+<article class="panel-card">
+    <SectionHeader Eyebrow="Krok 6" Title="Zweryfikuj wykrycie i diagnostyke" />
+    @if (SelectedRuntimePort is null)
+    {
+        <p class="empty-state">Brak danych runtime dla wybranego portu.</p>
+    }
+    else
+    {
+        <div class="stack-list">
+            <article class="stack-item">
+                <div class="pill-row">
+                    <StatusBadge Tone="@HardwareIntegrationWizardSupport.MapTone(SelectedRuntimePort.Status)">@SelectedRuntimePort.Status</StatusBadge>
+                    <StatusBadge Kind="chip" Tone="info">@SelectedRuntimePort.Mode</StatusBadge>
+                    <StatusBadge Kind="chip" Tone="info">ostatni sygnal @SelectedRuntimePort.LastSignalAt</StatusBadge>
+                </div>
+                <strong>@SelectedRuntimePort.PortId / @SelectedRuntimePort.Alias</strong>
+                <p>@SelectedRuntimePort.Summary</p>
+                <div class="chip-row">
+                    <span class="chip @(HardwareIntegrationWizardSupport.BoolChipClass(SelectedRuntimePort.Detected))">wykrycie @(SelectedRuntimePort.Detected ? "tak" : "nie")</span>
+                    <span class="chip @(HardwareIntegrationWizardSupport.NullableBoolChipClass(SelectedRuntimePort.LinkUp))">link @HardwareIntegrationWizardSupport.DisplayNullableBool(SelectedRuntimePort.LinkUp)</span>
+                    <span class="chip @(HardwareIntegrationWizardSupport.NullableBoolChipClass(SelectedRuntimePort.RxActive))">RX @HardwareIntegrationWizardSupport.DisplayNullableBool(SelectedRuntimePort.RxActive)</span>
+                    <span class="chip @(HardwareIntegrationWizardSupport.NullableBoolChipClass(SelectedRuntimePort.TxActive))">TX @HardwareIntegrationWizardSupport.DisplayNullableBool(SelectedRuntimePort.TxActive)</span>
+                </div>
+                <p class="detail-copy">@SelectedRuntimePort.Recommendation</p>
+                @if (!string.IsNullOrWhiteSpace(SelectedRuntimePort.LastRaw))
+                {
+                    <p class="detail-copy">raw: @SelectedRuntimePort.LastRaw</p>
+                }
+            </article>
+            <article class="stack-item">
+                <div class="pill-row">
+                    <StatusBadge Tone="info">test sygnalu</StatusBadge>
+                    <StatusBadge Kind="chip" Tone="info">bez zapisu konfiguracji</StatusBadge>
+                </div>
+                <p class="detail-copy">Uruchom szybki test runtime dla aktualnie wybranego portu, zanim zapiszesz konfiguracje collectora.</p>
+                <button class="action-button secondary"
+                        type="button"
+                        @onclick="OnTestSignal"
+                        disabled="@(TestingSignal || SelectedRuntimePort is null)">
+                    @(TestingSignal ? "Sprawdzanie..." : "Sprawdz sygnal na tym porcie")
+                </button>
+                @if (SignalTestResult is not null)
+                {
+                    <div class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@SignalTestResult.Tone">@(SignalTestResult.Success ? "gotowy" : "uwaga")</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@SignalTestResult.PortId</StatusBadge>
+                        </div>
+                        <p>@SignalTestResult.Summary</p>
+                        <div class="stack-list">
+                            @foreach (var observation in SignalTestResult.Observations)
+                            {
+                                <p class="detail-copy">@observation</p>
+                            }
+                        </div>
+                        <p class="detail-copy">@SignalTestResult.Recommendation</p>
+                    </div>
+                }
+            </article>
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter] public HardwarePortStatusRecord? SelectedRuntimePort { get; set; }
+    [Parameter] public bool TestingSignal { get; set; }
+    [Parameter] public HardwarePortSignalTestResultRecord? SignalTestResult { get; set; }
+    [Parameter] public EventCallback OnTestSignal { get; set; }
+}

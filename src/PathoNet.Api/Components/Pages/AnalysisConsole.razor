@@ -1,0 +1,285 @@
+@page "/blazor/analiza"
+@attribute [Authorize(Policy = PathoNetPermissions.AnalysisView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie analizy...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null)
+{
+    var analysis = _state.PortalState.PredictionAnalysis;
+    var predictions = analysis.Predictions;
+    var dataset = analysis.Dataset;
+    var activity = _state.PortalState.Activity;
+    var history = _state.PortalState.History;
+    var groups = _state.PortalState.Groups;
+
+    <section class="hero-band">
+        <article class="hero-card">
+            <p class="eyebrow">Analiza</p>
+            <h2>Predykcja zdarzen i poglebiona analityka</h2>
+            <p class="hero-copy">
+                Ta sekcja sklada pierwszy fundament predykcji po stronie serwera. Pokazuje rekomendowany model,
+                cele predykcyjne, pipeline normalizacji RS-232 i biezacy scoring ryzyka dla urzadzen.
+            </p>
+        </article>
+
+        <article class="hero-card accent">
+            <p class="eyebrow">Rekomendowany model</p>
+            <h3>@analysis.RecommendedModel.ModelName</h3>
+            <p>@analysis.RecommendedModel.Summary</p>
+            <div class="pill-row">
+                <StatusBadge Tone="info">@analysis.RecommendedModel.DeploymentMode</StatusBadge>
+                <StatusBadge Kind="chip" Tone="attention">@analysis.RecommendedModel.InferenceWindow</StatusBadge>
+            </div>
+            <div class="dashboard-inline-actions">
+                <a class="action-button secondary" href="/api/prediction/dataset/export?format=csv&amp;resolvedOnly=true" target="_blank" rel="noreferrer">Export CSV</a>
+                <a class="action-button secondary" href="/api/prediction/dataset/manifest" target="_blank" rel="noreferrer">Manifest treningu</a>
+            </div>
+        </article>
+    </section>
+
+    <MetricGrid>
+        <MetricTile Label="Model" Value="@analysis.RecommendedModel.ModelName" Caption="@analysis.RecommendedModel.ProblemType" />
+        <MetricTile Label="Targety" Value="@analysis.TargetLabels.Length.ToString()" Caption="Cele do wdrozenia na serwerze" />
+        <MetricTile Label="Grupy cech" Value="@analysis.FeatureGroups.Length.ToString()" Caption="Schemat cech pod trening" />
+        <MetricTile Label="Snapshoty" Value="@dataset.SnapshotCount.ToString()" Caption="Magazyn cech treningowych" />
+        <MetricTile Label="Pending label" Value="@dataset.PendingLabelCount.ToString()" Caption="Etykiety czekajace na domkniecie" />
+        <MetricTile Label="Resolved label" Value="@dataset.ResolvedLabelCount.ToString()" Caption="Auto-domkniete etykiety treningowe" />
+        <MetricTile Label="Predykcje" Value="@predictions.Length.ToString()" Caption="Biezacy scoring ryzyka" />
+    </MetricGrid>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Uzasadnienie" Title="Dlaczego ten model warto wdrozyc" />
+            <div class="stack-list">
+                @foreach (var reason in analysis.RecommendedModel.Reasons)
+                {
+                    <article class="stack-item">
+                        <StatusBadge Tone="info">XGBoost</StatusBadge>
+                        <p>@reason</p>
+                    </article>
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Targety" Title="Cele predykcyjne do wdrozenia" />
+            <div class="stack-list">
+                @foreach (var target in analysis.TargetLabels)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="attention">@target.Priority</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@target.Horizon</StatusBadge>
+                        </div>
+                        <strong>@target.Title</strong>
+                        <p>@target.Summary</p>
+                        <p class="detail-copy">kod targetu: @target.Code</p>
+                    </article>
+                }
+            </div>
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Cechy" Title="Grupy cech pod trening modelu" />
+            <div class="stack-list">
+                @foreach (var featureGroup in analysis.FeatureGroups)
+                {
+                    <article class="stack-item">
+                        <strong>@featureGroup.Name</strong>
+                        <p>@featureGroup.Purpose</p>
+                        <p class="detail-copy">@string.Join(", ", featureGroup.Features)</p>
+                    </article>
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Pipeline" Title="Normalizacja RS-232 do modelu" />
+            <div class="stack-list">
+                @foreach (var step in analysis.NormalizationPipeline)
+                {
+                    <article class="stack-item">
+                        <strong>@step.Step</strong>
+                        <p>@step.Summary</p>
+                        <p class="detail-copy">@step.Input -> @step.Output</p>
+                    </article>
+                }
+            </div>
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Dataset" Title="Magazyn treningowy na serwerze" />
+            <div class="stack-list">
+                <article class="stack-item">
+                    <strong>Ostatni snapshot</strong>
+                    <p>@(dataset.LastCapturedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") ?? "brak danych")</p>
+                    <p class="detail-copy">Snapshoty i etykiety sa odkladane do osobnej bazy SQLite po stronie serwera.</p>
+                </article>
+                @foreach (var target in dataset.TargetCoverage)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="info">@target.Horizon</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="attention">@target.Code</StatusBadge>
+                        </div>
+                        <strong>@target.Title</strong>
+                        <p class="detail-copy">pending @target.PendingCount / resolved @target.ResolvedCount / positive @target.PositiveCount / negative @target.NegativeCount</p>
+                    </article>
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Proby" Title="Ostatnie snapshoty cech" />
+            <div class="stack-list">
+                @foreach (var sample in dataset.RecentSamples)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@MapStatusTone(sample.CurrentLevel)">@sample.CurrentLevel</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@sample.Port</StatusBadge>
+                        </div>
+                        <strong>@sample.DisplayName</strong>
+                        <p>@sample.CapturedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") / status @sample.Status</p>
+                        <p class="detail-copy">risk @sample.RiskScore / health @sample.HealthScore / alert pressure @sample.AlertPressure</p>
+                    </article>
+                }
+            </div>
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Scoring" Title="Biezace predykcje i rekomendacje" />
+            <div class="stack-list">
+                @foreach (var prediction in predictions)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@MapRiskTone(prediction.RiskLabel)">@prediction.RiskLabel</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@prediction.Horizon</StatusBadge>
+                        </div>
+                        <strong>@prediction.DisplayName</strong>
+                        <p>@prediction.Summary</p>
+                        <p class="detail-copy">prawdopodobienstwo @prediction.Probability% / @prediction.Recommendation</p>
+                    </article>
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Aktywnosc" Title="Bucketowa aktywnosc sygnalow" />
+            <div class="mini-metric-grid wide">
+                @foreach (var bucket in activity)
+                {
+                    <article class="metric-tile">
+                        <span>@bucket.Label</span>
+                        <strong>@bucket.Count</strong>
+                        <small>@bucket.WorstLevel / alarm @bucket.AlarmCount / warn @bucket.WarnCount</small>
+                    </article>
+                }
+            </div>
+        </article>
+    </section>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Grupy" Title="Agregacja problemow" />
+            <div class="stack-list">
+                @foreach (var group in groups)
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@MapStatusTone(group.WorstLevel)">@group.WorstLevel</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@group.DeviceCount urzadzen</StatusBadge>
+                        </div>
+                        <strong>@group.Name</strong>
+                        <p>@group.Summary</p>
+                        <p class="detail-copy">alerty @group.AlertCount / srednie zdrowie @group.AverageHealth%</p>
+                    </article>
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Historia" Title="Ostatnie zdarzenia" />
+            <div class="stack-list">
+                @foreach (var item in history.Take(10))
+                {
+                    <article class="stack-item">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@MapStatusTone(item.Level)">@item.Level</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@item.Port</StatusBadge>
+                        </div>
+                        <strong>@item.DisplayName</strong>
+                        <p>@item.Message</p>
+                        <p class="detail-copy">@item.OccurredAt / regula @(item.RuleName ?? "brak")</p>
+                    </article>
+                }
+            </div>
+        </article>
+    </section>
+}
+
+@code {
+    private BlazorServiceDashboardState? _state;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync() =>
+        await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _state = await PortalService.GetServiceDashboardAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Nie udalo sie zaladowac analizy: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string MapRiskTone(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "high" => "critical",
+            "medium" => "attention",
+            _ => "info"
+        };
+
+    private static string MapStatusTone(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "alarm" => "critical",
+            "error" => "critical",
+            "warn" => "attention",
+            "attention" => "attention",
+            "critical" => "critical",
+            _ => "info"
+        };
+}

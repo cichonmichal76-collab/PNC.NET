@@ -1,0 +1,253 @@
+@page "/blazor/health"
+@attribute [Authorize(Policy = PathoNetPermissions.HealthView)]
+@inject BlazorPortalService PortalService
+
+@if (_loading)
+{
+    <section class="panel-card">
+        <p class="inline-status">Ladowanie zdrowia uslug...</p>
+    </section>
+}
+else if (!string.IsNullOrWhiteSpace(_error))
+{
+    <section class="panel-card">
+        <StatusBadge Tone="critical">Blad</StatusBadge>
+        <p>@_error</p>
+    </section>
+}
+else if (_state is not null)
+{
+    var summary = _state.Summary;
+    var services = _state.Services;
+    var history = _state.RestartHistory;
+
+    @if (!string.IsNullOrWhiteSpace(_statusMessage))
+    {
+        <section class="panel-card">
+            <div class="pill-row">
+                <StatusBadge Tone="@(_statusTone ?? "info")">Akcja serwisowa</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">Blazor Web App</StatusBadge>
+            </div>
+            <p>@_statusMessage</p>
+        </section>
+    }
+
+    <div class="form-actions">
+        <button class="action-button secondary" type="button" @onclick="RefreshAsync">Odswiez</button>
+        <a class="action-button secondary" href="/api/portal/service-health" target="_blank" rel="noreferrer">API health</a>
+    </div>
+
+    <MetricGrid>
+        <MetricTile Label="Online" Value="@($"{summary.OnlineCount}/{summary.TotalCount}")" Caption="Procesy odpowiadajace" />
+        <MetricTile Label="Watchdog" Value="@summary.WatchdogCount.ToString()" Caption="Hosty z aktywnym heartbeat" />
+        <MetricTile Label="systemd" Value="@summary.SystemdCount.ToString()" Caption="Runtime wykryty przez host" />
+        <MetricTile Label="Restarty" Value="@summary.TotalRestartCount.ToString()" Caption="Suma startow runtime" />
+        <MetricTile Label="Akcje" Value="@summary.RecentRestartCount.ToString()" Caption="Historia restartow z panelu" />
+        <MetricTile Label="Bledy" Value="@summary.FailedRestartCount.ToString()" Caption="Nieudane akcje restartu" />
+    </MetricGrid>
+
+    <section class="content-grid two-up">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Uslugi" Title="Karty zdrowia i akcje restartu" />
+            <div class="device-grid-lite">
+                @foreach (var service in services)
+                {
+                    <article class="device-lite">
+                        <div class="pill-row">
+                            <StatusBadge Tone="@MapTone(service.Status)">@service.Status</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@service.DisplayName</StatusBadge>
+                        </div>
+                        <h4>@service.Name</h4>
+                        <p>@service.Summary</p>
+                        <div class="chip-row">
+                            <StatusBadge Kind="chip" Tone="info">@service.RuntimeMode</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">PID @(service.ProcessId?.ToString() ?? "-")</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">restarty @service.RestartCount</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@service.RestartMode</StatusBadge>
+                        </div>
+                        <div class="form-actions">
+                            @if (_canManage && service.SupportsRestart)
+                            {
+                                <button class="action-button secondary" type="button" disabled="@_busyServices.Contains(service.Name)" @onclick="() => RestartAsync(service.Name)">
+                                    @(_busyServices.Contains(service.Name) ? "Restartuje..." : "Restartuj usluge")
+                                </button>
+                            }
+                            else
+                            {
+                                <button class="action-button secondary" type="button" disabled>Restart niedostepny</button>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        </article>
+
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Historia restartow" Title="Ostatnie akcje operacyjne" />
+            @if (history.Length == 0)
+            {
+                <p class="empty-state">Brak historii restartow z panelu Blazor.</p>
+            }
+            else
+            {
+                <div class="stack-list">
+                    @foreach (var entry in history.Take(10))
+                    {
+                        <article class="stack-item">
+                            <div class="pill-row">
+                                <StatusBadge Tone="@MapTone(entry.Status)">@entry.Status</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@entry.DisplayName</StatusBadge>
+                                <StatusBadge Kind="chip" Tone="info">@entry.Mode</StatusBadge>
+                            </div>
+                            <strong>@entry.Summary</strong>
+                            <p class="detail-copy">
+                                zlecono @entry.RequestedAtUtc.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") /
+                                zakonczono @(entry.CompletedAtUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") ?? "w toku")
+                            </p>
+                            <p class="detail-copy">
+                                pid przed @(entry.PreviousProcessId?.ToString() ?? "-") /
+                                pid po @(entry.CurrentProcessId?.ToString() ?? "-") /
+                                zrodlo @entry.RequestedBy
+                            </p>
+                        </article>
+                    }
+                </div>
+            }
+        </article>
+    </section>
+
+    <section class="content-grid">
+        <article class="panel-card">
+            <SectionHeader Eyebrow="Tabela" Title="Pelny widok procesow i logow" />
+            <div class="table-shell">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Usluga</th>
+                            <th>Status</th>
+                            <th>PID</th>
+                            <th>Tryb</th>
+                            <th>Heartbeat</th>
+                            <th>Restarty</th>
+                            <th>Log stdout</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var service in services)
+                        {
+                            <tr>
+                                <td>@service.DisplayName</td>
+                                <td><StatusBadge Kind="chip" Tone="@MapTone(service.Status)">@service.Status</StatusBadge></td>
+                                <td class="mono">@(service.ProcessId?.ToString() ?? "-")</td>
+                                <td>@service.RuntimeMode</td>
+                                <td>@(service.LastWatchdogHeartbeatUtc?.ToLocalTime().ToString("dd.MM.yyyy HH:mm:ss") ?? "brak")</td>
+                                <td>@service.RestartCount</td>
+                                <td class="mono">@(service.StdoutPath ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </article>
+    </section>
+}
+
+@code {
+    [CascadingParameter] private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private PortalServiceHealthStateRecord? _state;
+    private bool _loading = true;
+    private string? _error;
+    private string? _statusMessage;
+    private string? _statusTone;
+    private readonly HashSet<string> _busyServices = new(StringComparer.OrdinalIgnoreCase);
+    private bool _canManage;
+
+    protected override async Task OnInitializedAsync() =>
+        await LoadAsync();
+
+    private async Task RefreshAsync() =>
+        await LoadAsync();
+
+    private async Task RestartAsync(string serviceName)
+    {
+        if (!EnsureCanManage())
+        {
+            return;
+        }
+
+        _busyServices.Add(serviceName);
+        _statusMessage = null;
+        _statusTone = null;
+
+        try
+        {
+            var result = await PortalService.RequestServiceRestartAsync(serviceName, "blazor-web-app", CancellationToken.None);
+            _statusMessage = result.Message;
+            _statusTone = result.Accepted ? "attention" : "critical";
+
+            if (result.Accepted && !string.Equals(serviceName, "PathoNet.Api", StringComparison.OrdinalIgnoreCase))
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                await LoadAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = $"Nie udalo sie wykonac restartu {serviceName}: {ex.Message}";
+            _statusTone = "critical";
+        }
+        finally
+        {
+            _busyServices.Remove(serviceName);
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var principal = (await AuthenticationStateTask).User;
+            _canManage = principal.HasPermission(PathoNetPermissions.HealthManage);
+            _state = PortalService.GetServiceHealthState();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Nie udalo sie zaladowac zdrowia uslug: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string MapTone(string value) =>
+        value.ToLowerInvariant() switch
+        {
+            "online" => "online",
+            "completed" => "online",
+            "attention" => "attention",
+            "warn" => "attention",
+            "scheduled" => "attention",
+            "critical" => "critical",
+            "alarm" => "critical",
+            "failed" => "critical",
+            _ => "info"
+        };
+
+    private bool EnsureCanManage()
+    {
+        if (_canManage)
+        {
+            return true;
+        }
+
+        _statusMessage = $"Brak uprawnienia {PathoNetPermissions.HealthManage}.";
+        _statusTone = "critical";
+        return false;
+    }
+}

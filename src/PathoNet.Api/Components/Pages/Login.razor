@@ -1,0 +1,78 @@
+@page "/blazor/login"
+@layout Layout.LoginLayout
+@attribute [AllowAnonymous]
+@using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Navigation
+
+<section class="login-surface">
+    <article class="login-intro-card">
+        <p class="eyebrow">PathoNet Access</p>
+        <h1>Logowanie do panelu PathoNet</h1>
+        <p class="lead-copy">
+            Zaloguj sie lokalnym kontem, aby przejsc do dashboardu, serwisu, analizy, OTA i administracji dostepem.
+        </p>
+        <div class="hero-inline">
+            <StatusBadge Kind="chip" Tone="info">Lokalna baza uzytkownikow</StatusBadge>
+            <StatusBadge Kind="chip" Tone="info">Cookie auth</StatusBadge>
+            <StatusBadge Kind="chip" Tone="info">Role i uprawnienia</StatusBadge>
+        </div>
+
+        <div class="login-help-grid">
+            <article class="login-help-card">
+                <strong>Tryb lokalny</strong>
+                <p>Panel lokalny PNC pozwala pracowac nawet bez dostepu do hosta lub GSM.</p>
+            </article>
+            <article class="login-help-card">
+                <strong>Tryb hosta</strong>
+                <p>Po zalogowaniu mozesz przelaczyc sie na portal hosta i prace zdalna.</p>
+            </article>
+        </div>
+    </article>
+
+    <article class="login-form-card">
+        <SectionHeader Eyebrow="Logowanie" Title="Wprowadz dane dostepowe" />
+
+        @if (string.Equals(Error, "invalid", StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="pill-row">
+                <StatusBadge Tone="critical">Blad logowania</StatusBadge>
+                <StatusBadge Kind="chip" Tone="info">Sprawdz login i haslo</StatusBadge>
+            </div>
+        }
+
+        <form class="editor-form" method="post" action="/identity/login" data-enhance="false">
+            <AntiforgeryToken />
+            <input type="hidden" name="returnUrl" value="@ResolvedReturnUrl" />
+            <label class="field">
+                <span>Login</span>
+                <input name="userName" type="text" value="@UserName" placeholder="np. admin" />
+            </label>
+            <label class="field">
+                <span>Haslo</span>
+                <input name="password" type="password" placeholder="Twoje haslo" />
+            </label>
+            <div class="form-actions">
+                <button class="action-button primary" type="submit">Zaloguj</button>
+                <a class="action-button secondary" href="/">Powrot</a>
+            </div>
+        </form>
+
+        <div class="login-accounts">
+            <strong>Konta startowe</strong>
+            <div class="login-account-list">
+                <span class="chip info">Admin / 123</span>
+                <span class="chip info">Serwis / 123</span>
+                <span class="chip info">Szpital / 123</span>
+                <span class="chip info">Operator / 123</span>
+            </div>
+        </div>
+    </article>
+</section>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] public string? Error { get; set; }
+    [SupplyParameterFromQuery] public string? UserName { get; set; }
+
+    private string ResolvedReturnUrl => string.IsNullOrWhiteSpace(ReturnUrl) ? "/blazor" : ReturnUrl!;
+}
