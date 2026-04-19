@@ -12,6 +12,9 @@ tmp/
 *.cache
 *.log
 *.pid
+*.db
+*.db-shm
+*.db-wal
 
 .vs/
 .vscode/
