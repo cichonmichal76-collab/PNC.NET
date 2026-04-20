@@ -1,73 +1,154 @@
 @using PathoNet.Api.Components.Pages
 
 <article class="panel-card">
-    <SectionHeader Eyebrow="Krok 3" Title="Mapa gniazd PNC" />
-    <p class="detail-copy">Kliknij bezposrednio na gniazdo z tylu urzadzenia. To tutaj technik wskazuje port lub magistrale, ktore maja zostac skonfigurowane.</p>
+    <SectionHeader Eyebrow="Krok 3" Title="Wybierz port komunikacyjny" />
+    <p class="detail-copy">Uzyj pol formularza, aby wskazac typ interfejsu i konkretny port. Reprezentacja ponizej jest tylko pogladowa i nie steruje kreatorem.</p>
 
     @if (!string.IsNullOrWhiteSpace(SuggestedPortId))
     {
-        <p class="detail-copy">Collector podswietla sugerowane gniazdo jako pierwszy wybor. Nadal mozesz wskazac inne gniazdo recznie.</p>
+        <p class="detail-copy">Collector zaznacza sugerowany port jako pierwszy wybor. Nadal mozesz zmienic typ interfejsu i port recznie.</p>
     }
 
-    <section class="hardware-visual-panel">
-        <div class="hardware-visual-panel-head">
-            <div>
-                <strong>Mapa gniazd PNC</strong>
-                <p class="detail-copy">Kolory pokazuja, ktore gniazda sa widoczne dla collectora i gdzie pojawia sie aktywnosc polaczenia.</p>
-            </div>
-            <div class="hardware-visual-legend">
-                <span class="chip info">szary = brak</span>
-                <span class="chip attention">zolty = stabilizacja</span>
-                <span class="chip online">zielony = link</span>
-                <span class="chip info">strzalki = TX / RX</span>
-            </div>
-        </div>
+    @if (InterfaceGroups.Count == 0)
+    {
+        <p class="empty-state">Brak portow do konfiguracji.</p>
+    }
+    else
+    {
+        <section class="port-selector-shell">
+            <div class="port-selector-form">
+                <div class="commissioning-form-grid port-selector-fields">
+                    <label class="commissioning-field">
+                        <span>Typ interfejsu</span>
+                        <select value="@ActiveInterfaceType" @onchange="HandleInterfaceTypeChanged">
+                            @foreach (var group in InterfaceGroups)
+                            {
+                                <option value="@group.InterfaceType">@group.Label (@group.Ports.Count)</option>
+                            }
+                        </select>
+                    </label>
 
-        <div class="hardware-backplane">
-            <img src="/images/hardware-rear-panel.png"
-                 alt="Tylny panel PNC z gniazdami ETH, RS485, CAN, WE DRY i RS232." />
-            @foreach (var port in LayoutPorts)
-            {
-                var layout = HardwareIntegrationWizardSupport.GetPortLayout(port.PortId);
-                if (layout is not null)
-                {
-                    <HardwarePortVisual Port="port"
-                                        Layout="layout"
-                                        SelectedPortId="SelectedPortId"
-                                        SuggestedPortId="SuggestedPortId"
-                                        OnSelect="OnSelectPort" />
-                }
-            }
-        </div>
-
-        <div class="hardware-visual-selected">
-            @if (SelectedPort is null)
-            {
-                <p class="detail-copy">Nie wybrano jeszcze portu. Kliknij gniazdo na grafice, aby przejsc dalej.</p>
-            }
-            else
-            {
-                <div class="pill-row">
-                    <StatusBadge Tone="@HardwareIntegrationWizardSupport.MapTone(SelectedPort.Status)">@SelectedPort.Status</StatusBadge>
-                    <StatusBadge Kind="chip" Tone="info">@SelectedPort.PortId</StatusBadge>
-                    <StatusBadge Kind="chip" Tone="info">@HardwareIntegrationWizardSupport.GetVisualStateLabel(SelectedPort)</StatusBadge>
+                    <label class="commissioning-field">
+                        <span>Port</span>
+                        <select value="@SelectedPortId" @onchange="HandlePortChanged">
+                            @foreach (var port in VisiblePorts)
+                            {
+                                <option value="@port.PortId">@port.PortId - @port.Alias</option>
+                            }
+                        </select>
+                    </label>
                 </div>
-                <p class="detail-copy"><strong>@SelectedPort.Alias</strong> - @SelectedPort.Summary</p>
-            }
-        </div>
-    </section>
+
+                <div class="hardware-visual-selected">
+                    @if (SelectedPort is null)
+                    {
+                        <p class="detail-copy">Nie wybrano jeszcze portu. Wskaz typ interfejsu i port, a potem przejdz dalej przyciskiem Dalej.</p>
+                    }
+                    else
+                    {
+                        <div class="pill-row">
+                            <StatusBadge Tone="@HardwareIntegrationWizardSupport.MapTone(SelectedPort.Status)">@SelectedPort.Status</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@GetInterfaceLabel(SelectedPort.InterfaceType)</StatusBadge>
+                            <StatusBadge Kind="chip" Tone="info">@SelectedPort.PortId</StatusBadge>
+                            @if (string.Equals(SelectedPort.PortId, SuggestedPortId, StringComparison.OrdinalIgnoreCase))
+                            {
+                                <StatusBadge Kind="chip" Tone="info">sugerowany</StatusBadge>
+                            }
+                        </div>
+                        <p class="detail-copy"><strong>@SelectedPort.Alias</strong> - @SelectedPort.Summary</p>
+                        <p class="detail-copy">@GetInterfaceDescription(SelectedPort.InterfaceType)</p>
+                    }
+                </div>
+            </div>
+
+            <section class="port-selector-visual" aria-label="Pogladowa reprezentacja portow PNC">
+                <div class="hardware-visual-panel-head">
+                    <div>
+                        <strong>Uproszczona reprezentacja portow</strong>
+                        <p class="detail-copy">Sekcje pokazuja dostepne grupy interfejsow i ich aktualny stan. Wybierasz je wyzej z list formularza.</p>
+                    </div>
+                    <div class="hardware-visual-legend">
+                        <span class="chip info">szary = brak</span>
+                        <span class="chip attention">zolty = stabilizacja</span>
+                        <span class="chip online">zielony = link</span>
+                        <span class="chip info">rameczka = aktualny wybor</span>
+                    </div>
+                </div>
+
+                <div class="port-family-grid">
+                    @foreach (var group in InterfaceGroups)
+                    {
+                        var groupIsActive = string.Equals(group.InterfaceType, ActiveInterfaceType, StringComparison.OrdinalIgnoreCase);
+                        <article class="port-family-card @(groupIsActive ? "is-active" : string.Empty)">
+                            <div class="port-family-card-head">
+                                <div>
+                                    <strong>@group.Label</strong>
+                                    <p class="detail-copy">@GetInterfaceDescription(group.InterfaceType)</p>
+                                </div>
+                                <StatusBadge Kind="chip" Tone="info">@group.Ports.Count port.</StatusBadge>
+                            </div>
+
+                            <div class="port-family-port-grid">
+                                @foreach (var port in group.Ports)
+                                {
+                                    var visualClass = $"port-visual-chip {HardwareIntegrationWizardSupport.GetVisualStateClass(port)}";
+                                    if (string.Equals(port.PortId, SuggestedPortId, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        visualClass += " is-suggested";
+                                    }
+
+                                    if (string.Equals(port.PortId, SelectedPortId, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        visualClass += " is-selected";
+                                    }
+
+                                    <div class="@visualClass">
+                                        <span class="port-visual-chip-name">@port.PortId</span>
+                                        <span class="port-visual-chip-state">@HardwareIntegrationWizardSupport.GetVisualStateLabel(port)</span>
+                                    </div>
+                                }
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        </section>
+    }
 </article>
 
 @code {
     [Parameter, EditorRequired] public HardwarePortStatusRecord[] ConnectedPorts { get; set; } = [];
     [Parameter, EditorRequired] public HardwarePortStatusRecord[] OtherPorts { get; set; } = [];
     [Parameter] public string? SuggestedPortId { get; set; }
+    [Parameter] public string? SelectedInterfaceType { get; set; }
     [Parameter] public string? SelectedPortId { get; set; }
+    [Parameter] public EventCallback<string> OnSelectInterfaceType { get; set; }
     [Parameter] public EventCallback<string> OnSelectPort { get; set; }
 
-    private IReadOnlyList<HardwarePortStatusRecord> LayoutPorts =>
-        HardwareIntegrationWizardSupport.GetLayoutPorts(ConnectedPorts, OtherPorts);
+    private IReadOnlyList<HardwarePortStatusRecord> SelectablePorts =>
+        HardwareIntegrationWizardSupport.GetSelectablePorts(ConnectedPorts, OtherPorts);
+
+    private IReadOnlyList<HardwarePortInterfaceGroup> InterfaceGroups =>
+        HardwareIntegrationWizardSupport.GetInterfaceGroups(SelectablePorts);
+
+    private string ActiveInterfaceType =>
+        HardwareIntegrationWizardSupport.ResolveActiveInterfaceType(SelectedInterfaceType, SelectedPortId, InterfaceGroups);
+
+    private IReadOnlyList<HardwarePortStatusRecord> VisiblePorts =>
+        HardwareIntegrationWizardSupport.GetPortsForInterface(SelectablePorts, ActiveInterfaceType);
 
     private HardwarePortStatusRecord? SelectedPort =>
-        LayoutPorts.FirstOrDefault(port => string.Equals(port.PortId, SelectedPortId, StringComparison.OrdinalIgnoreCase));
+        SelectablePorts.FirstOrDefault(port => string.Equals(port.PortId, SelectedPortId, StringComparison.OrdinalIgnoreCase));
+
+    private Task HandleInterfaceTypeChanged(ChangeEventArgs args) =>
+        OnSelectInterfaceType.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private Task HandlePortChanged(ChangeEventArgs args) =>
+        OnSelectPort.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private static string GetInterfaceLabel(string interfaceType) =>
+        HardwareIntegrationWizardSupport.GetInterfaceLabel(interfaceType);
+
+    private static string GetInterfaceDescription(string interfaceType) =>
+        HardwareIntegrationWizardSupport.GetInterfaceDescription(interfaceType);
 }

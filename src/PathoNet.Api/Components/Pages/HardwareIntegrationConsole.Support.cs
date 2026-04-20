@@ -4,24 +4,14 @@ using PathoNet.Api;
 
 internal static class HardwareIntegrationWizardSupport
 {
-    private static readonly HardwarePortLayoutDefinition[] PortLayouts =
-    [
-        new("ETH1", 20.68, 36.12, 7.03, 12.16),
-        new("ETH2", 31.18, 36.12, 7.03, 12.16),
-        new("ETH3", 41.98, 36.12, 7.03, 12.16),
-        new("ETH4", 52.88, 36.12, 7.03, 12.16),
-        new("RS485", 67.15, 42.05, 7.55, 7.8),
-        new("CAN", 81.95, 42.05, 7.55, 7.8),
-        new("WE DRY", 25.15, 61.15, 10.9, 8.45),
-        new("RS232/4", 42.0, 61.95, 7.75, 7.8),
-        new("RS232/3", 54.6, 61.95, 7.75, 7.8),
-        new("RS232/2", 67.05, 61.95, 7.75, 7.8),
-        new("RS232/1", 81.85, 61.95, 7.75, 7.8)
-    ];
+    private static readonly IReadOnlyDictionary<string, int> PortOrder =
+        HardwareIntegrationDefinitions.Ports
+            .Select((port, index) => new KeyValuePair<string, int>(port.PortId, index))
+            .ToDictionary(static entry => entry.Key, static entry => entry.Value, StringComparer.OrdinalIgnoreCase);
 
     internal static readonly HardwareWizardStepDefinition[] WizardSteps =
     [
-        new(HardwareWizardStep.SelectPort, "Port", "Wybierz fizyczne gniazdo lub magistrale."),
+        new(HardwareWizardStep.SelectPort, "Port", "Wybierz typ interfejsu i port do konfiguracji."),
         new(HardwareWizardStep.ChooseProfile, "Profil", "Dobierz gotowy profil techniczny."),
         new(HardwareWizardStep.Configure, "Nastawy", "Ustaw parametry collectora i fallback."),
         new(HardwareWizardStep.Verify, "Weryfikacja", "Sprawdz runtime, RX/TX i diagnostyke."),
@@ -32,7 +22,7 @@ internal static class HardwareIntegrationWizardSupport
     [
         new(1, "Start wdrozenia", "Uruchom urzadzenie i przejdz kontrole systemu.", HardwareDeploymentStage.Startup),
         new(2, "Personalizacja urzadzenia", "Uzupelnij dane instalacyjne i lokalizacje.", HardwareDeploymentStage.Personalization),
-        new(3, "Mapa gniazd PNC", "Kliknij gniazdo, ktore chcesz skonfigurowac.", HardwareDeploymentStage.PortCommissioning, HardwareWizardStep.SelectPort),
+        new(3, "Wybor portu PNC", "Wybierz typ interfejsu i port do konfiguracji.", HardwareDeploymentStage.PortCommissioning, HardwareWizardStep.SelectPort),
         new(4, "Profil komunikacji", "Dobierz gotowy profil komunikacji.", HardwareDeploymentStage.PortCommissioning, HardwareWizardStep.ChooseProfile),
         new(5, "Nastawy collectora", "Ustaw parametry collectora.", HardwareDeploymentStage.PortCommissioning, HardwareWizardStep.Configure),
         new(6, "Weryfikacja", "Zweryfikuj wykrycie i diagnostyke.", HardwareDeploymentStage.PortCommissioning, HardwareWizardStep.Verify),
@@ -140,7 +130,7 @@ internal static class HardwareIntegrationWizardSupport
         return score;
     }
 
-    internal static IReadOnlyList<HardwarePortStatusRecord> GetLayoutPorts(
+    internal static IReadOnlyList<HardwarePortStatusRecord> GetSelectablePorts(
         IEnumerable<HardwarePortStatusRecord> connectedPorts,
         IEnumerable<HardwarePortStatusRecord> otherPorts)
     {
@@ -149,14 +139,109 @@ internal static class HardwareIntegrationWizardSupport
             .GroupBy(static port => port.PortId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(static group => group.Key, static group => group.First(), StringComparer.OrdinalIgnoreCase);
 
-        return PortLayouts
-            .Where(layout => portsById.ContainsKey(layout.PortId))
-            .Select(layout => portsById[layout.PortId])
+        return portsById.Values
+            .OrderBy(port => GetInterfaceOrder(port.InterfaceType))
+            .ThenBy(port => GetPortOrder(port.PortId))
+            .ThenBy(port => port.PortId, StringComparer.OrdinalIgnoreCase)
             .ToArray();
     }
 
-    internal static HardwarePortLayoutDefinition? GetPortLayout(string portId) =>
-        PortLayouts.FirstOrDefault(layout => string.Equals(layout.PortId, portId, StringComparison.OrdinalIgnoreCase));
+    internal static IReadOnlyList<HardwarePortInterfaceGroup> GetInterfaceGroups(IEnumerable<HardwarePortStatusRecord> ports) =>
+        ports
+            .GroupBy(port => port.InterfaceType, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => GetInterfaceOrder(group.Key))
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => new HardwarePortInterfaceGroup(
+                group.Key,
+                GetInterfaceLabel(group.Key),
+                group.OrderBy(port => GetPortOrder(port.PortId))
+                     .ThenBy(port => port.PortId, StringComparer.OrdinalIgnoreCase)
+                     .ToArray()))
+            .ToArray();
+
+    internal static string ResolveActiveInterfaceType(
+        string? selectedInterfaceType,
+        string? selectedPortId,
+        IReadOnlyList<HardwarePortInterfaceGroup> groups)
+    {
+        if (!string.IsNullOrWhiteSpace(selectedInterfaceType)
+            && groups.Any(group => string.Equals(group.InterfaceType, selectedInterfaceType, StringComparison.OrdinalIgnoreCase)))
+        {
+            return selectedInterfaceType;
+        }
+
+        if (!string.IsNullOrWhiteSpace(selectedPortId))
+        {
+            var matchedGroup = groups.FirstOrDefault(group =>
+                group.Ports.Any(port => string.Equals(port.PortId, selectedPortId, StringComparison.OrdinalIgnoreCase)));
+
+            if (matchedGroup is not null)
+            {
+                return matchedGroup.InterfaceType;
+            }
+        }
+
+        return groups.FirstOrDefault()?.InterfaceType ?? string.Empty;
+    }
+
+    internal static IReadOnlyList<HardwarePortStatusRecord> GetPortsForInterface(
+        IEnumerable<HardwarePortStatusRecord> ports,
+        string? interfaceType) =>
+        ports
+            .Where(port => string.Equals(port.InterfaceType, interfaceType, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(port => GetPortOrder(port.PortId))
+            .ThenBy(port => port.PortId, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+    internal static string? FindFirstPortIdForInterface(
+        IEnumerable<CollectorPortConfigRecord> ports,
+        string interfaceType,
+        string? suggestedPortId) =>
+        ports
+            .Where(port => string.Equals(port.InterfaceType, interfaceType, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(port => string.Equals(port.PortId, suggestedPortId, StringComparison.OrdinalIgnoreCase))
+            .ThenBy(port => GetPortOrder(port.PortId))
+            .ThenBy(port => port.PortId, StringComparer.OrdinalIgnoreCase)
+            .Select(static port => port.PortId)
+            .FirstOrDefault();
+
+    internal static int GetInterfaceOrder(string interfaceType) =>
+        interfaceType switch
+        {
+            "rs232" => 0,
+            "rs485" => 1,
+            "can" => 2,
+            "ethernet" => 3,
+            "dry-contact" => 4,
+            _ => 5
+        };
+
+    internal static string GetInterfaceLabel(string interfaceType) =>
+        interfaceType switch
+        {
+            "rs232" => "RS232",
+            "rs485" => "RS485",
+            "can" => "CAN",
+            "ethernet" => "ETH",
+            "dry-contact" => "WE DRY",
+            _ => interfaceType
+        };
+
+    internal static string GetInterfaceDescription(string interfaceType) =>
+        interfaceType switch
+        {
+            "rs232" => "Szeregowe porty DB9 do indywidualnych urzadzen nadawczych.",
+            "rs485" => "Wspolna magistrala dla czujnikow i ukladow wielowezlowych.",
+            "can" => "Magistrala CAN do telemetrii i ramek komunikacyjnych.",
+            "ethernet" => "Porty sieciowe dla serwisu, uplinku i urzadzen IP.",
+            "dry-contact" => "Wejscie binarne dla sygnalow alarmowych i dry contact.",
+            _ => "Port komunikacyjny PNC."
+        };
+
+    private static int GetPortOrder(string portId) =>
+        PortOrder.TryGetValue(portId, out var order)
+            ? order
+            : int.MaxValue;
 
     internal static string GetVisualStateClass(HardwarePortStatusRecord port) =>
         port.ConnectionState.ToLowerInvariant() switch
@@ -208,12 +293,10 @@ public sealed record HardwarePortProfileDefinition(
     string? DevicePathHint = null,
     string? NetworkInterfaceNameHint = null);
 
-public sealed record HardwarePortLayoutDefinition(
-    string PortId,
-    double Left,
-    double Top,
-    double Width,
-    double Height);
+internal sealed record HardwarePortInterfaceGroup(
+    string InterfaceType,
+    string Label,
+    IReadOnlyList<HardwarePortStatusRecord> Ports);
 
 internal enum HardwareWizardStep
 {

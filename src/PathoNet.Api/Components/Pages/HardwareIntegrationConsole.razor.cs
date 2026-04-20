@@ -20,6 +20,7 @@ public partial class HardwareIntegrationConsole
     private string _statusTone = "info";
     private bool _canManage;
     private bool _canRestartCollector;
+    private string? _selectedInterfaceType;
     private string? _selectedPortId;
     private string? _suggestedPortId;
     private string? _selectedProfileName;
@@ -139,10 +140,12 @@ public partial class HardwareIntegrationConsole
                 _selectedPortId = selectedExists
                     ? _selectedPortId
                     : _suggestedPortId ?? _configState.Ports[0].PortId;
+                SyncSelectedInterfaceType();
                 SyncPortForm();
             }
             else
             {
+                _selectedInterfaceType = null;
                 _selectedPortId = null;
                 _suggestedPortId = null;
                 _selectedProfileName = null;
@@ -174,11 +177,41 @@ public partial class HardwareIntegrationConsole
 
     private void SelectPort(string portId)
     {
+        if (string.IsNullOrWhiteSpace(portId))
+        {
+            return;
+        }
+
         _selectedPortId = portId;
+        SyncSelectedInterfaceType();
         _selectedProfileName = null;
         _signalTestResult = null;
         SyncPortForm();
-        _wizardStep = HardwareWizardStep.ChooseProfile;
+    }
+
+    private void SelectInterfaceType(string interfaceType)
+    {
+        if (string.IsNullOrWhiteSpace(interfaceType))
+        {
+            return;
+        }
+
+        _selectedInterfaceType = interfaceType;
+
+        if (SelectedPortConfig is not null
+            && string.Equals(SelectedPortConfig.InterfaceType, interfaceType, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        var nextPortId = _configState is null
+            ? null
+            : HardwareIntegrationWizardSupport.FindFirstPortIdForInterface(_configState.Ports, interfaceType, _suggestedPortId);
+
+        if (!string.IsNullOrWhiteSpace(nextPortId))
+        {
+            SelectPort(nextPortId);
+        }
     }
 
     private void ProceedToPersonalization()
@@ -215,7 +248,7 @@ public partial class HardwareIntegrationConsole
         }
 
         _deploymentStage = HardwareDeploymentStage.PortCommissioning;
-        _statusMessage = "Personalizacja zapisana. Wybierz teraz gniazdo lub magistrale do konfiguracji.";
+        _statusMessage = "Personalizacja zapisana. Wybierz teraz typ interfejsu i port do konfiguracji.";
         _statusTone = "online";
     }
 
@@ -230,6 +263,14 @@ public partial class HardwareIntegrationConsole
         _portForm = SelectedPortConfig is null
             ? HardwarePortFormModel.CreateEmpty()
             : HardwarePortFormModel.FromConfig(SelectedPortConfig);
+    }
+
+    private void SyncSelectedInterfaceType()
+    {
+        _selectedInterfaceType =
+            SelectedPortConfig?.InterfaceType
+            ?? SelectedRuntimePort?.InterfaceType
+            ?? _selectedInterfaceType;
     }
 
     private async Task SavePortAsync()

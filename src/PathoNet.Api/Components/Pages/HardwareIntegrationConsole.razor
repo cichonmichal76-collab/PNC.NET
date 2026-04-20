@@ -114,7 +114,7 @@ else if (_state is not null)
                         <h2>Uzupelnij dane instalacyjne PNC</h2>
                         <p class="hero-copy">
                             Wpisz numer seryjny urzadzenia, wybierz docelowa lokalizacje i uzupelnij dane instalatora.
-                            Po zatwierdzeniu przejdziesz do mapy gniazd PNC.
+                            Po zatwierdzeniu przejdziesz do wyboru portu PNC.
                         </p>
                     </article>
 
@@ -216,20 +216,20 @@ else if (_state is not null)
             case HardwareDeploymentStage.PortCommissioning:
                 <section class="hero-band">
                     <article class="hero-card">
-                        <p class="eyebrow">Krok 3 / Mapa gniazd PNC</p>
-                        <h2>Kliknij gniazdo, ktore chcesz skonfigurowac</h2>
+                        <p class="eyebrow">Krok 3 / Wybierz port PNC</p>
+                        <h2>Wybierz typ interfejsu i port do konfiguracji</h2>
                         <p class="hero-copy">
-                            Kontrola systemu zakonczona. Teraz wybierz fizyczne gniazdo lub magistrale na tylu urzadzenia,
+                            Kontrola systemu zakonczona. Teraz wybierz typ interfejsu i konkretny port z formularza,
                             a kreator przeprowadzi Cie dalej przez profil komunikacji, nastawy, weryfikacje i zapis konfiguracji.
                         </p>
                     </article>
 
                     <article class="hero-card accent">
-                        <p class="eyebrow">Po wyborze gniazda</p>
+                        <p class="eyebrow">Po wyborze portu</p>
                         @if (selectedPort is null)
                         {
                             <p class="hero-copy">
-                                Kliknij wybrane gniazdo na mapie PNC. Po wskazaniu portu od razu przejdziesz do doboru profilu komunikacji.
+                                Wybierz typ interfejsu i port na formularzu. Potem przejdziesz dalej przyciskiem Dalej do doboru profilu komunikacji.
                             </p>
                         }
                         else
@@ -251,7 +251,9 @@ else if (_state is not null)
                             <HardwareWizardPortStep ConnectedPorts="connectedPorts"
                                                     OtherPorts="otherPorts"
                                                     SuggestedPortId="_suggestedPortId"
+                                                    SelectedInterfaceType="_selectedInterfaceType"
                                                     SelectedPortId="_selectedPortId"
+                                                    OnSelectInterfaceType="SelectInterfaceType"
                                                     OnSelectPort="SelectPort" />
                             break;
 
